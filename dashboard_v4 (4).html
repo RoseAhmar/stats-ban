@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Дашборд — Закупки аккаунтов</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: #f0efeb;
+    color: #1c1c1a;
+    min-height: 100vh;
+    padding: 2rem;
+    font-size: 15px;
+    line-height: 1.5;
+  }
+  .dash { max-width: 1280px; margin: 0 auto; }
+  .page-header { margin-bottom: 2rem; padding-bottom: 1.25rem; border-bottom: 1px solid rgba(0,0,0,0.1); }
+  .page-title { font-size: 26px; font-weight: 600; letter-spacing: -0.5px; color: #1c1c1a; }
+  .page-sub { font-size: 14px; color: #888780; margin-top: 4px; }
+
+  .top-metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 2rem; }
+  .metric { background: #fff; border-radius: 14px; padding: 1.25rem 1.5rem; border: 1px solid rgba(0,0,0,0.07); }
+  .metric-label { font-size: 13px; color: #888780; font-weight: 500; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.04em; }
+  .metric-value { font-size: 32px; font-weight: 600; color: #1c1c1a; letter-spacing: -1px; }
+  .metric-hint { font-size: 12px; color: #bbb; margin-top: 4px; }
+
+  .controls {
+    display: flex; gap: 12px; margin-bottom: 1.5rem; flex-wrap: wrap; align-items: center;
+    background: #fff; padding: 0.875rem 1.25rem; border-radius: 12px; border: 1px solid rgba(0,0,0,0.07);
+  }
+  .controls label { font-size: 14px; color: #888780; font-weight: 500; }
+  .controls select, .controls input {
+    font-size: 14px; font-family: 'Inter', sans-serif; padding: 6px 12px;
+    border: 1px solid rgba(0,0,0,0.15); border-radius: 8px; background: #f7f7f5;
+    color: #1c1c1a; cursor: pointer; outline: none;
+  }
+  .controls input { cursor: text; width: 80px; }
+  .controls select:focus, .controls input:focus { border-color: #888; }
+  .controls .sep { width: 1px; height: 24px; background: rgba(0,0,0,0.1); margin: 0 4px; }
+
+  .section-label { font-size: 13px; font-weight: 600; color: #888780; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 1rem; }
+
+  .cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; margin-bottom: 2.5rem; }
+  .card { background: #fff; border-radius: 16px; padding: 1.25rem 1.5rem; border: 1px solid rgba(0,0,0,0.07); transition: box-shadow 0.15s; }
+  .card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.08); }
+
+  .card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem; }
+  .card-id { font-size: 18px; font-weight: 600; letter-spacing: -0.3px; }
+  .card-gmail { font-size: 13px; color: #888780; margin-top: 3px; font-weight: 500; }
+  .card-badge { font-size: 13px; font-weight: 600; padding: 4px 10px; border-radius: 20px; }
+  .badge-green { background: #E3F3D5; color: #2d6010; }
+  .badge-amber { background: #FEF0D8; color: #7a4a08; }
+  .badge-red   { background: #FDEAEA; color: #8f2020; }
+
+  .farm-section { margin-bottom: 1rem; }
+  .farm-label-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+  .farm-label { font-size: 12px; font-weight: 600; color: #aaa; text-transform: uppercase; letter-spacing: 0.05em; }
+  .farm-counts { font-size: 13px; color: #888780; }
+  .bar-bg { height: 6px; background: #ebebeb; border-radius: 99px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 99px; }
+
+  .divider { height: 1px; background: rgba(0,0,0,0.07); margin: 1rem 0; }
+
+  .doc-block { margin-bottom: 10px; }
+  .doc-block:last-child { margin-bottom: 0; }
+  .doc-name-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
+  .doc-name { font-size: 14px; font-weight: 600; color: #1c1c1a; }
+  .doc-valid-count { font-size: 12px; color: #aaa; }
+  .doc-bar-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+  .doc-bar-bg { flex: 1; height: 5px; background: #ebebeb; border-radius: 99px; overflow: hidden; }
+  .doc-bar-fill { height: 100%; border-radius: 99px; }
+  .doc-ver-pct { font-size: 14px; font-weight: 600; min-width: 42px; text-align: right; }
+  .doc-counters { display: flex; gap: 6px; flex-wrap: wrap; }
+  .doc-counter { font-size: 12px; font-weight: 500; padding: 3px 10px; border-radius: 20px; }
+  .cnt-pass { background: #E3F3D5; color: #2d6010; }
+  .cnt-fail { background: #FDEAEA; color: #8f2020; }
+  .cnt-wait { background: #f0efeb; color: #888780; }
+  .doc-no-vna { font-size: 13px; color: #bbb; font-style: italic; }
+
+  .heatmap-section { background: #fff; border-radius: 16px; padding: 1.5rem; border: 1px solid rgba(0,0,0,0.07); margin-bottom: 1.5rem; overflow-x: auto; }
+  .heatmap-table { border-collapse: separate; border-spacing: 0; font-size: 14px; width: 100%; }
+  .heatmap-table th { padding: 8px 14px; color: #888780; font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; text-align: left; border-bottom: 2px solid #f0efeb; white-space: nowrap; }
+  .heatmap-table td { padding: 9px 14px; text-align: center; border-bottom: 1px solid #f5f5f3; white-space: nowrap; font-size: 14px; font-weight: 500; }
+  .heatmap-table tr:last-child td { border-bottom: none; }
+  .heatmap-table .id-cell { text-align: left; color: #555; font-weight: 600; font-size: 14px; }
+  .heatmap-table .gmail-cell { text-align: left; color: #888780; font-weight: 500; min-width: 110px; }
+  .heatmap-table .farm-cell { font-weight: 600; }
+
+  .legend { display: flex; gap: 16px; font-size: 13px; color: #888780; flex-wrap: wrap; align-items: center; margin-top: 1rem; }
+  .legend-item { display: flex; align-items: center; gap: 6px; }
+  .legend-box { width: 14px; height: 14px; border-radius: 4px; }
+
+  .empty-state { text-align: center; padding: 3rem; color: #bbb; font-size: 15px; }
+
+  .hm-cell { position: relative; cursor: default; }
+  .hm-cell .tooltip {
+    display: none;
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: #1c1c1a;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 400;
+    border-radius: 8px;
+    padding: 8px 12px;
+    white-space: nowrap;
+    z-index: 100;
+    min-width: 160px;
+    pointer-events: none;
+    line-height: 1.8;
+    text-align: left;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+  }
+  .hm-cell .tooltip::before {
+    content: '';
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 5px solid transparent;
+    border-bottom-color: #1c1c1a;
+  }
+  .hm-cell:hover .tooltip { display: block; }
+</style>
+</head>
+<body>
+<div class="dash">
+
+  <div class="page-header">
+    <div class="page-title">Закупки аккаунтов</div>
+    <div class="page-sub">Фарм → верификация по закупкам, апрель 2026</div>
+  </div>
+
+  <div class="top-metrics" id="top-metrics"></div>
+
+  <div class="controls">
+    <label>ID закупки:</label>
+    <input type="text" id="filter-id" placeholder="напр. 28" oninput="render()" />
+    <div class="sep"></div>
+    <label>Gmail Seller:</label>
+    <select id="filter-gmail" onchange="render()"><option value="">Все</option></select>
+    <div class="sep"></div>
+    <label>Doc Seller:</label>
+    <select id="filter-doc" onchange="render()"><option value="">Все</option></select>
+    <div class="sep"></div>
+    <label>Сортировка:</label>
+    <select id="sort-by" onchange="render()">
+      <option value="id">По ID закупки</option>
+      <option value="valid_desc">Выход с фарма ↓</option>
+      <option value="valid_asc">Выход с фарма ↑</option>
+    </select>
+  </div>
+
+  <div class="section-label">Карточки закупок</div>
+  <div class="cards-grid" id="cards"></div>
+
+  <div class="section-label">Тепловая карта — % успеха верификации</div>
+  <div class="heatmap-section">
+    <table class="heatmap-table" id="heatmap"></table>
+    <div class="legend">
+      <span style="font-weight:600;">Верификация:</span>
+      <span class="legend-item"><span class="legend-box" style="background:#E3F3D5;"></span>80% и выше</span>
+      <span class="legend-item"><span class="legend-box" style="background:#FEF0D8;"></span>60–79%</span>
+      <span class="legend-item"><span class="legend-box" style="background:#FDEAEA;"></span>ниже 60%</span>
+      <span class="legend-item"><span class="legend-box" style="background:#f0efeb;border:1px solid #ddd;"></span>нет данных</span>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const DATA = [{"id": "5", "gmail": "itsPVApro", "total": 97, "real_total": 97, "valid": 95, "invalid": 2, "valid_pct": 97.9, "docs": [{"doc": "1-k1", "total": 96, "valid": 95, "valid_pct": 99.0, "vna": 57, "passed": 48, "failed": 9, "not_yet": 38, "success_pct": 84.2, "bans": {"Бан по докам": {"n": 4, "pct": 44.4}, "Мультиакк": {"n": 1, "pct": 11.1}, "20 минутный таск": {"n": 1, "pct": 11.1}, "Без причины": {"n": 3, "pct": 33.3}}}]}, {"id": "6", "gmail": "buy_acc_srvs", "total": 50, "real_total": 50, "valid": 49, "invalid": 1, "valid_pct": 98.0, "docs": [{"doc": "1-k1", "total": 50, "valid": 49, "valid_pct": 98.0, "vna": 39, "passed": 31, "failed": 8, "not_yet": 10, "success_pct": 79.5, "bans": {"Бан по докам": {"n": 4, "pct": 50.0}, "20 минутный таск": {"n": 1, "pct": 12.5}, "Без причины": {"n": 3, "pct": 37.5}}}]}, {"id": "7", "gmail": "itsPVApro", "total": 100, "real_total": 100, "valid": 100, "invalid": 0, "valid_pct": 100.0, "docs": [{"doc": "1-k1", "total": 2, "valid": 2, "valid_pct": 100.0, "vna": 2, "passed": 1, "failed": 1, "not_yet": 0, "success_pct": 50.0, "bans": {"20 минутный таск": {"n": 1, "pct": 100.0}}}]}, {"id": "8", "gmail": "buy_acc_srvs", "total": 104, "real_total": 104, "valid": 92, "invalid": 12, "valid_pct": 88.5, "docs": [{"doc": "1-k1", "total": 11, "valid": 11, "valid_pct": 100.0, "vna": 9, "passed": 6, "failed": 3, "not_yet": 2, "success_pct": 66.7, "bans": {"Бан по докам": {"n": 1, "pct": 33.3}, "Мультиакк": {"n": 2, "pct": 66.7}}}]}, {"id": "9", "gmail": "itsPVApro", "total": 193, "real_total": 193, "valid": 192, "invalid": 1, "valid_pct": 99.5, "docs": [{"doc": "1-k1", "total": 31, "valid": 30, "valid_pct": 96.8, "vna": 23, "passed": 20, "failed": 3, "not_yet": 7, "success_pct": 87.0, "bans": {"Бан по докам": {"n": 3, "pct": 100.0}}}]}, {"id": "10", "gmail": "buy_acc_srvs", "total": 50, "real_total": 50, "valid": 27, "invalid": 23, "valid_pct": 54.0, "docs": [{"doc": "1-k1", "total": 27, "valid": 27, "valid_pct": 100.0, "vna": 24, "passed": 23, "failed": 1, "not_yet": 3, "success_pct": 95.8, "bans": {"Без причины": {"n": 1, "pct": 100.0}}}]}, {"id": "11", "gmail": "buy_acc_srvs", "total": 50, "real_total": 50, "valid": 24, "invalid": 12, "valid_pct": 48.0, "docs": [{"doc": "1-k1", "total": 45, "valid": 24, "valid_pct": 53.3, "vna": 17, "passed": 14, "failed": 3, "not_yet": 7, "success_pct": 82.4, "bans": {"Бан по докам": {"n": 2, "pct": 66.7}, "20 минутный таск": {"n": 1, "pct": 33.3}}}]}, {"id": "12", "gmail": "itsPVApro", "total": 199, "real_total": 199, "valid": 196, "invalid": 3, "valid_pct": 98.5, "docs": [{"doc": "1-k1", "total": 186, "valid": 186, "valid_pct": 100.0, "vna": 108, "passed": 100, "failed": 8, "not_yet": 78, "success_pct": 92.6, "bans": {"Бан по докам": {"n": 3, "pct": 37.5}, "20 минутный таск": {"n": 5, "pct": 62.5}}}]}, {"id": "13", "gmail": "itsPVApro", "total": 250, "real_total": 250, "valid": 248, "invalid": 2, "valid_pct": 99.2, "docs": [{"doc": "1-k1", "total": 139, "valid": 139, "valid_pct": 100.0, "vna": 84, "passed": 69, "failed": 15, "not_yet": 55, "success_pct": 82.1, "bans": {"Бан по докам": {"n": 7, "pct": 46.7}, "20 минутный таск": {"n": 2, "pct": 13.3}, "Без причины": {"n": 6, "pct": 40.0}}}, {"doc": "3-lod", "total": 59, "valid": 59, "valid_pct": 100.0, "vna": 41, "passed": 37, "failed": 4, "not_yet": 18, "success_pct": 90.2, "bans": {"Бан по докам": {"n": 1, "pct": 25.0}, "20 минутный таск": {"n": 2, "pct": 50.0}, "Без причины": {"n": 1, "pct": 25.0}}}, {"doc": "Fels", "total": 2, "valid": 2, "valid_pct": 100.0, "vna": 1, "passed": 1, "failed": 0, "not_yet": 1, "success_pct": 100.0, "bans": {}}]}, {"id": "14", "gmail": "itsPVApro", "total": 149, "real_total": 149, "valid": 149, "invalid": 0, "valid_pct": 100.0, "docs": [{"doc": "1-k1", "total": 122, "valid": 122, "valid_pct": 100.0, "vna": 74, "passed": 53, "failed": 21, "not_yet": 48, "success_pct": 71.6, "bans": {"Бан по докам": {"n": 4, "pct": 19.0}, "Мультиакк": {"n": 13, "pct": 61.9}, "20 минутный таск": {"n": 4, "pct": 19.0}}}]}, {"id": "15", "gmail": "buy_acc_srvs", "total": 100, "real_total": 100, "valid": 74, "invalid": 26, "valid_pct": 74.0, "docs": [{"doc": "1-k1", "total": 89, "valid": 74, "valid_pct": 83.1, "vna": 69, "passed": 38, "failed": 31, "not_yet": 5, "success_pct": 55.1, "bans": {"Упал на номер": {"n": 24, "pct": 77.4}, "20 минутный таск": {"n": 3, "pct": 9.7}, "Без причины": {"n": 4, "pct": 12.9}}}]}, {"id": "16", "gmail": "itsPVApro", "total": 196, "real_total": 196, "valid": 29, "invalid": 167, "valid_pct": 14.8, "docs": [{"doc": "1-k1", "total": 29, "valid": 29, "valid_pct": 100.0, "vna": 10, "passed": 9, "failed": 1, "not_yet": 19, "success_pct": 90.0, "bans": {"Бан по докам": {"n": 1, "pct": 100.0}}}]}, {"id": "17", "gmail": "itsPVApro", "total": 100, "real_total": 100, "valid": 0, "invalid": 100, "valid_pct": 0.0, "docs": []}, {"id": "18", "gmail": "itsPVApro", "total": 198, "real_total": 198, "valid": 58, "invalid": 130, "valid_pct": 29.3, "docs": [{"doc": "1-k1", "total": 50, "valid": 37, "valid_pct": 74.0, "vna": 25, "passed": 13, "failed": 12, "not_yet": 12, "success_pct": 52.0, "bans": {"Бан по докам": {"n": 1, "pct": 8.3}, "Мультиакк": {"n": 7, "pct": 58.3}, "20 минутный таск": {"n": 1, "pct": 8.3}, "Без причины": {"n": 3, "pct": 25.0}}}, {"doc": "Fels", "total": 21, "valid": 21, "valid_pct": 100.0, "vna": 15, "passed": 10, "failed": 5, "not_yet": 6, "success_pct": 66.7, "bans": {"Бан по докам": {"n": 1, "pct": 20.0}, "Без причины": {"n": 4, "pct": 80.0}}}]}, {"id": "19", "gmail": "haruu", "total": 50, "real_total": 50, "valid": 7, "invalid": 25, "valid_pct": 14.0, "docs": [{"doc": "1-k1", "total": 31, "valid": 7, "valid_pct": 22.6, "vna": 1, "passed": 1, "failed": 0, "not_yet": 6, "success_pct": 100.0, "bans": {}}]}, {"id": "20", "gmail": "buy_acc_srvs", "total": 100, "real_total": 100, "valid": 68, "invalid": 30, "valid_pct": 68.0, "docs": [{"doc": "1-k1", "total": 80, "valid": 63, "valid_pct": 78.8, "vna": 30, "passed": 13, "failed": 17, "not_yet": 33, "success_pct": 43.3, "bans": {"Бан по докам": {"n": 1, "pct": 5.9}, "Упал на номер": {"n": 9, "pct": 52.9}, "Без причины": {"n": 7, "pct": 41.2}}}, {"doc": "Fels", "total": 7, "valid": 5, "valid_pct": 71.4, "vna": 2, "passed": 1, "failed": 1, "not_yet": 3, "success_pct": 50.0, "bans": {"Без причины": {"n": 1, "pct": 100.0}}}]}, {"id": "21", "gmail": "buy_acc_srvs", "total": 100, "real_total": 100, "valid": 39, "invalid": 61, "valid_pct": 39.0, "docs": [{"doc": "1-k1", "total": 30, "valid": 23, "valid_pct": 76.7, "vna": 15, "passed": 13, "failed": 2, "not_yet": 8, "success_pct": 86.7, "bans": {"Бан по докам": {"n": 2, "pct": 100.0}}}, {"doc": "Fels", "total": 21, "valid": 16, "valid_pct": 76.2, "vna": 11, "passed": 9, "failed": 2, "not_yet": 5, "success_pct": 81.8, "bans": {"Без причины": {"n": 2, "pct": 100.0}}}]}, {"id": "22", "gmail": "itsPVApro", "total": 98, "real_total": 98, "valid": 37, "invalid": 48, "valid_pct": 37.8, "docs": [{"doc": "1-k1", "total": 16, "valid": 7, "valid_pct": 43.8, "vna": 1, "passed": 1, "failed": 0, "not_yet": 6, "success_pct": 100.0, "bans": {}}, {"doc": "Fels", "total": 34, "valid": 30, "valid_pct": 88.2, "vna": 14, "passed": 14, "failed": 0, "not_yet": 16, "success_pct": 100.0, "bans": {}}]}, {"id": "23", "gmail": "itsPVApro", "total": 30, "real_total": 30, "valid": 9, "invalid": 21, "valid_pct": 30.0, "docs": [{"doc": "1-k1", "total": 12, "valid": 9, "valid_pct": 75.0, "vna": 1, "passed": 1, "failed": 0, "not_yet": 8, "success_pct": 100.0, "bans": {}}]}, {"id": "24", "gmail": "buy_acc_srvs", "total": 174, "real_total": 174, "valid": 108, "invalid": 66, "valid_pct": 62.1, "docs": [{"doc": "1-k1", "total": 128, "valid": 93, "valid_pct": 72.7, "vna": 57, "passed": 43, "failed": 14, "not_yet": 36, "success_pct": 75.4, "bans": {"Бан по докам": {"n": 3, "pct": 21.4}, "Упал на номер": {"n": 4, "pct": 28.6}, "Мультиакк": {"n": 1, "pct": 7.1}, "20 минутный таск": {"n": 2, "pct": 14.3}, "Без причины": {"n": 4, "pct": 28.6}}}]}, {"id": "25", "gmail": "DarkSt", "total": 136, "real_total": 136, "valid": 134, "invalid": 2, "valid_pct": 98.5, "docs": [{"doc": "1-k1", "total": 127, "valid": 126, "valid_pct": 99.2, "vna": 59, "passed": 53, "failed": 6, "not_yet": 67, "success_pct": 89.8, "bans": {"Бан по докам": {"n": 1, "pct": 16.7}, "Упал на номер": {"n": 1, "pct": 16.7}, "20 минутный таск": {"n": 1, "pct": 16.7}, "Без причины": {"n": 3, "pct": 50.0}}}]}, {"id": "26", "gmail": "primeac", "total": 100, "real_total": 100, "valid": 48, "invalid": 52, "valid_pct": 48.0, "docs": [{"doc": "1-k1", "total": 48, "valid": 48, "valid_pct": 100.0, "vna": 39, "passed": 39, "failed": 0, "not_yet": 9, "success_pct": 100.0, "bans": {}}]}, {"id": "27", "gmail": "acmarket", "total": 99, "real_total": 99, "valid": 99, "invalid": 0, "valid_pct": 100.0, "docs": [{"doc": "1-k1", "total": 93, "valid": 93, "valid_pct": 100.0, "vna": 52, "passed": 49, "failed": 3, "not_yet": 41, "success_pct": 94.2, "bans": {"Бан по докам": {"n": 1, "pct": 33.3}, "20 минутный таск": {"n": 1, "pct": 33.3}, "Без причины": {"n": 1, "pct": 33.3}}}]}, {"id": "28", "gmail": "DarkSt", "total": 99, "real_total": 99, "valid": 93, "invalid": 5, "valid_pct": 93.9, "docs": [{"doc": "1-k1", "total": 98, "valid": 93, "valid_pct": 94.9, "vna": 52, "passed": 50, "failed": 2, "not_yet": 41, "success_pct": 96.2, "bans": {"Бан по докам": {"n": 2, "pct": 100.0}}}]}, {"id": "29", "gmail": "acmarket", "total": 100, "real_total": 100, "valid": 0, "invalid": 100, "valid_pct": 0.0, "docs": []}, {"id": "30", "gmail": "DarkSt", "total": 99, "real_total": 100, "valid": 95, "invalid": 4, "valid_pct": 96.0, "docs": [{"doc": "1-k1", "total": 99, "valid": 95, "valid_pct": 96.0, "vna": 43, "passed": 32, "failed": 11, "not_yet": 52, "success_pct": 74.4, "bans": {"Бан по докам": {"n": 1, "pct": 9.1}, "Мультиакк": {"n": 5, "pct": 45.5}, "Без причины": {"n": 5, "pct": 45.5}}}]}, {"id": "31", "gmail": "z2u", "total": 50, "real_total": 50, "valid": 44, "invalid": 6, "valid_pct": 88.0, "docs": [{"doc": "1-k1", "total": 49, "valid": 44, "valid_pct": 89.8, "vna": 25, "passed": 11, "failed": 14, "not_yet": 19, "success_pct": 44.0, "bans": {"Мультиакк": {"n": 8, "pct": 57.1}, "Без причины": {"n": 6, "pct": 42.9}}}]}, {"id": "32", "gmail": "acmarket", "total": 50, "real_total": 50, "valid": 50, "invalid": 0, "valid_pct": 100.0, "docs": [{"doc": "1-k1", "total": 50, "valid": 50, "valid_pct": 100.0, "vna": 11, "passed": 11, "failed": 0, "not_yet": 39, "success_pct": 100.0, "bans": {}}]}, {"id": "33", "gmail": "acmarket", "total": 50, "real_total": 50, "valid": 47, "invalid": 3, "valid_pct": 94.0, "docs": [{"doc": "1-k1", "total": 47, "valid": 47, "valid_pct": 100.0, "vna": 10, "passed": 9, "failed": 1, "not_yet": 37, "success_pct": 90.0, "bans": {"Мультиакк": {"n": 1, "pct": 100.0}}}]}, {"id": "34", "gmail": "primeac", "total": 47, "real_total": 47, "valid": 46, "invalid": 1, "valid_pct": 97.9, "docs": [{"doc": "1-k1", "total": 46, "valid": 46, "valid_pct": 100.0, "vna": 0, "passed": 0, "failed": 0, "not_yet": 46, "success_pct": 0, "bans": {}}]}, {"id": "35", "gmail": "DarkSt", "total": 100, "real_total": 100, "valid": 96, "invalid": 1, "valid_pct": 96.0, "docs": [{"doc": "1-k1", "total": 96, "valid": 92, "valid_pct": 95.8, "vna": 16, "passed": 10, "failed": 6, "not_yet": 76, "success_pct": 62.5, "bans": {"Бан по докам": {"n": 1, "pct": 16.7}, "Мультиакк": {"n": 4, "pct": 66.7}, "Без причины": {"n": 1, "pct": 16.7}}}, {"doc": "3-lod", "total": 4, "valid": 4, "valid_pct": 100.0, "vna": 0, "passed": 0, "failed": 0, "not_yet": 4, "success_pct": 0, "bans": {}}]}, {"id": "36", "gmail": "DarkSt", "total": 99, "real_total": 99, "valid": 98, "invalid": 0, "valid_pct": 99.0, "docs": [{"doc": "1-k1", "total": 88, "valid": 87, "valid_pct": 98.9, "vna": 5, "passed": 5, "failed": 0, "not_yet": 82, "success_pct": 100.0, "bans": {}}, {"doc": "3-lod", "total": 10, "valid": 10, "valid_pct": 100.0, "vna": 0, "passed": 0, "failed": 0, "not_yet": 10, "success_pct": 0, "bans": {}}]}, {"id": "37", "gmail": "DarkSt", "total": 100, "real_total": 100, "valid": 99, "invalid": 1, "valid_pct": 99.0, "docs": [{"doc": "1-k1", "total": 100, "valid": 99, "valid_pct": 99.0, "vna": 0, "passed": 0, "failed": 0, "not_yet": 99, "success_pct": 0, "bans": {}}]}, {"id": "38", "gmail": "DarkSt", "total": 30, "real_total": 30, "valid": 30, "invalid": 0, "valid_pct": 100.0, "docs": [{"doc": "1-k1", "total": 30, "valid": 30, "valid_pct": 100.0, "vna": 1, "passed": 0, "failed": 1, "not_yet": 29, "success_pct": 0.0, "bans": {"Мультиакк": {"n": 1, "pct": 100.0}}}]}, {"id": "39", "gmail": "DarkSt", "total": 20, "real_total": 20, "valid": 20, "invalid": 0, "valid_pct": 100.0, "docs": [{"doc": "1-k1", "total": 20, "valid": 20, "valid_pct": 100.0, "vna": 0, "passed": 0, "failed": 0, "not_yet": 20, "success_pct": 0, "bans": {}}]}, {"id": "40", "gmail": "primeac", "total": 100, "real_total": 100, "valid": 69, "invalid": 28, "valid_pct": 69.0, "docs": [{"doc": "1-k1", "total": 70, "valid": 68, "valid_pct": 97.1, "vna": 4, "passed": 4, "failed": 0, "not_yet": 64, "success_pct": 100.0, "bans": {}}]}, {"id": "41", "gmail": "acmarket", "total": 100, "real_total": 100, "valid": 0, "invalid": 100, "valid_pct": 0.0, "docs": []}, {"id": "42", "gmail": "primeac", "total": 100, "real_total": 100, "valid": 44, "invalid": 23, "valid_pct": 44.0, "docs": [{"doc": "1-k1", "total": 69, "valid": 42, "valid_pct": 60.9, "vna": 0, "passed": 0, "failed": 0, "not_yet": 42, "success_pct": 0, "bans": {}}, {"doc": "3-lod", "total": 1, "valid": 0, "valid_pct": 0.0, "vna": 0, "passed": 0, "failed": 0, "not_yet": 0, "success_pct": 0, "bans": {}}]}, {"id": "43", "gmail": "smmacc", "total": 49, "real_total": 50, "valid": 18, "invalid": 30, "valid_pct": 36.7, "docs": [{"doc": "1-k1", "total": 28, "valid": 18, "valid_pct": 64.3, "vna": 0, "passed": 0, "failed": 0, "not_yet": 18, "success_pct": 0, "bans": {}}]}, {"id": "44", "gmail": "smmseo", "total": 50, "real_total": 50, "valid": 19, "invalid": 26, "valid_pct": 38.0, "docs": [{"doc": "1-k1", "total": 43, "valid": 19, "valid_pct": 44.2, "vna": 3, "passed": 3, "failed": 0, "not_yet": 16, "success_pct": 100.0, "bans": {}}]}, {"id": "46", "gmail": "acmarket", "total": 100, "real_total": 100, "valid": 28, "invalid": 66, "valid_pct": 28.0, "docs": [{"doc": "1-k1", "total": 34, "valid": 28, "valid_pct": 82.4, "vna": 3, "passed": 3, "failed": 0, "not_yet": 25, "success_pct": 100.0, "bans": {}}]}, {"id": "47", "gmail": "itshop", "total": 32, "real_total": 32, "valid": 20, "invalid": 1, "valid_pct": 62.5, "docs": [{"doc": "1-k1", "total": 31, "valid": 20, "valid_pct": 64.5, "vna": 0, "passed": 0, "failed": 0, "not_yet": 20, "success_pct": 0, "bans": {}}]}, {"id": "48", "gmail": "itshop", "total": 68, "real_total": 68, "valid": 5, "invalid": 2, "valid_pct": 7.4, "docs": [{"doc": "1-k1", "total": 67, "valid": 5, "valid_pct": 7.5, "vna": 0, "passed": 0, "failed": 0, "not_yet": 5, "success_pct": 0, "bans": {}}]}, {"id": "49", "gmail": "acmarket", "total": 100, "real_total": 100, "valid": 27, "invalid": 13, "valid_pct": 27.0, "docs": [{"doc": "1-k1", "total": 72, "valid": 18, "valid_pct": 25.0, "vna": 0, "passed": 0, "failed": 0, "not_yet": 18, "success_pct": 0, "bans": {}}]}, {"id": "50", "gmail": "z2u", "total": 50, "real_total": 50, "valid": 0, "invalid": 50, "valid_pct": 0.0, "docs": []}, {"id": "53", "gmail": "itshop", "total": 23, "real_total": 50, "valid": 0, "invalid": 23, "valid_pct": 0.0, "docs": []}, {"id": "54", "gmail": "itshop", "total": 3, "real_total": 50, "valid": 0, "invalid": 0, "valid_pct": 0.0, "docs": [{"doc": "1-k1", "total": 3, "valid": 0, "valid_pct": 0.0, "vna": 0, "passed": 0, "failed": 0, "not_yet": 0, "success_pct": 0, "bans": {}}]}, {"id": "55", "gmail": "itshop", "total": 55, "real_total": 105, "valid": 29, "invalid": 7, "valid_pct": 52.7, "docs": [{"doc": "1-k1", "total": 54, "valid": 29, "valid_pct": 53.7, "vna": 0, "passed": 0, "failed": 0, "not_yet": 29, "success_pct": 0, "bans": {}}]}, {"id": "56", "gmail": "primeac", "total": 50, "real_total": 50, "valid": 0, "invalid": 0, "valid_pct": 0.0, "docs": [{"doc": "1-k1", "total": 50, "valid": 0, "valid_pct": 0.0, "vna": 0, "passed": 0, "failed": 0, "not_yet": 0, "success_pct": 0, "bans": {}}]}, {"id": "57", "gmail": "primeac", "total": 90, "real_total": 100, "valid": 0, "invalid": 3, "valid_pct": 0.0, "docs": [{"doc": "1-k1", "total": 87, "valid": 0, "valid_pct": 0.0, "vna": 0, "passed": 0, "failed": 0, "not_yet": 0, "success_pct": 0, "bans": {}}]}];
+
+function farmColor(p){return p>=80?'#3a7d15':p>=60?'#9a5c08':'#c02020';}
+function verColor(p){return p>=80?'#3a7d15':p>=60?'#9a5c08':'#c02020';}
+function verBg(p){return p>=80?{bg:'#E3F3D5',c:'#2d6010'}:p>=60?{bg:'#FEF0D8',c:'#7a4a08'}:{bg:'#FDEAEA',c:'#8f2020'};}
+function badgeClass(p){return p>=80?'badge-green':p>=60?'badge-amber':'badge-red';}
+
+function getFiltered(){
+  const g=document.getElementById('filter-gmail').value;
+  const dc=document.getElementById('filter-doc').value;
+  const idQ=document.getElementById('filter-id').value.trim();
+  let d=[...DATA];
+  if(idQ) d=d.filter(x=>x.id===idQ);
+  if(g) d=d.filter(x=>x.gmail===g);
+  if(dc) d=d.filter(x=>x.docs.some(doc=>doc.doc===dc));
+  const s=document.getElementById('sort-by').value;
+  if(s==='valid_desc') d.sort((a,b)=>b.valid_pct-a.valid_pct);
+  else if(s==='valid_asc') d.sort((a,b)=>a.valid_pct-b.valid_pct);
+  else d.sort((a,b)=>Number(a.id)-Number(b.id));
+  return d;
+}
+
+function render(){
+  const data=getFiltered();
+  const tot=data.reduce((s,d)=>s+Number(d.total),0);
+  const val=data.reduce((s,d)=>s+Number(d.valid),0);
+  const inv=data.reduce((s,d)=>s+Number(d.invalid),0);
+  const farmPct=tot?Math.round(val/tot*1000)/10:0;
+  const invPct=tot?Math.round(inv/tot*1000)/10:0;
+  const wv=data.flatMap(d=>d.docs).filter(d=>Number(d.vna)>0);
+  const avgVer=wv.length?Math.round(wv.reduce((s,d)=>s+Number(d.success_pct),0)/wv.length*10)/10:0;
+
+  document.getElementById('top-metrics').innerHTML=`
+    <div class="metric">
+      <div class="metric-label">Закупок</div>
+      <div class="metric-value">${data.length}</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Всего аккаунтов</div>
+      <div class="metric-value">${tot.toLocaleString()}</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Выдан с фарма</div>
+      <div class="metric-value">${farmPct}%</div>
+      <div class="metric-hint">отсев: ${invPct}% — пустышки и после 1 логина</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Успех верификации</div>
+      <div class="metric-value">${avgVer}%</div>
+      <div class="metric-hint">из дошедших до верификации</div>
+    </div>`;
+
+  const dc=document.getElementById('filter-doc').value;
+  document.getElementById('cards').innerHTML=data.length===0
+    ?`<div class="empty-state">Нет данных по выбранным фильтрам</div>`
+    :data.map(d=>{
+      const visibleDocs=dc?d.docs.filter(x=>x.doc===dc):d.docs;
+      const docsHtml=visibleDocs.length?`
+        <div class="divider"></div>
+        ${visibleDocs.map(doc=>{
+          if(doc.vna===0&&doc.not_yet===0) return `<div class="doc-block"><div class="doc-name-row"><span class="doc-name">${doc.doc}</span><span class="doc-no-vna">нет данных</span></div></div>`;
+          const hasVer=doc.vna>0;
+          const barHtml=hasVer?`<div class="doc-bar-row">
+            <div class="doc-bar-bg"><div class="doc-bar-fill" style="width:${doc.success_pct}%;background:${verColor(doc.success_pct)};"></div></div>
+            <span class="doc-ver-pct" style="color:${verColor(doc.success_pct)};">${doc.success_pct}%</span>
+          </div>`:'';
+          return `<div class="doc-block">
+            <div class="doc-name-row"><span class="doc-name">${doc.doc}</span><span class="doc-valid-count">валид: ${doc.valid}</span></div>
+            ${barHtml}
+            <div class="doc-counters">
+              <span class="doc-counter cnt-pass">прошли ${doc.passed}</span>
+              <span class="doc-counter cnt-fail">на замену ${doc.failed}</span>
+              <span class="doc-counter cnt-wait">в очереди ${doc.not_yet}</span>
+            </div>
+          </div>`;
+        }).join('')}`
+      :`<div class="divider"></div><div class="doc-no-vna">нет данных по верификации</div>`;
+
+      const hasHidden = Number(d.real_total) > Number(d.total);
+      const hiddenNote = hasHidden
+        ? `<div style="font-size:11px;color:#aaa;margin-top:4px;">всего в закупке: ${d.real_total} — часть на других doc seller или без статуса</div>`
+        : '';
+      return `<div class="card">
+        <div class="card-header">
+          <div><div class="card-id">Закупка #${d.id}</div><div class="card-gmail">${d.gmail}</div></div>
+          <span class="card-badge ${badgeClass(d.valid_pct)}">${d.valid_pct}%</span>
+        </div>
+        <div class="farm-section">
+          <div class="farm-label-row">
+            <span class="farm-label">Выдан с фарма</span>
+            <span class="farm-counts">${d.valid} из ${d.total}</span>
+          </div>
+          <div class="bar-bg"><div class="bar-fill" style="width:${d.valid_pct}%;background:${farmColor(d.valid_pct)};"></div></div>
+          ${hiddenNote}
+        </div>
+        ${docsHtml}
+      </div>`;
+    }).join('');
+
+  const docs=['1-k1','3-lod','Fels'];
+  document.getElementById('heatmap').innerHTML=`
+    <thead><tr>
+      <th>ID</th><th>Gmail Seller</th><th>Выдан с фарма</th>
+      ${docs.map(d=>`<th>${d}</th>`).join('')}
+    </tr></thead>
+    <tbody>${data.map(d=>{
+      const cells=docs.map(doc=>{
+        const f=d.docs.find(x=>x.doc===doc);
+        if(!f||f.vna===0) return `<td style="background:#f7f7f5;color:#ccc;">—</td>`;
+        const c=verBg(f.success_pct);
+        const bans=f.bans||{};
+        const banKeys=Object.keys(bans);
+        let tooltipRows='';
+        if(f.failed>0){
+          tooltipRows+=`<div style="color:#aaa;margin-bottom:3px;">на замену: ${f.failed} акк.</div>`;
+          if(banKeys.length>0){
+            tooltipRows+=banKeys.map(k=>`<div><span style="color:#aaa;">${k}:</span> ${bans[k].n} (${bans[k].pct}%)</div>`).join('');
+          } else {
+            tooltipRows+=`<div style="color:#aaa;font-style:italic;">причины не указаны</div>`;
+          }
+        } else {
+          tooltipRows=`<div style="color:#9FE1CB;">все прошли верификацию</div>`;
+        }
+        const tooltip=`<div class="tooltip"><div style="font-weight:600;margin-bottom:4px;">${doc} #${d.id}</div><div style="color:#aaa;margin-bottom:4px;">прошли: ${f.passed} / ${f.vna}</div>${tooltipRows}</div>`;
+        return `<td class="hm-cell" style="background:${c.bg};color:${c.c};">${f.success_pct}%${tooltip}</td>`;
+      }).join('');
+      return `<tr>
+        <td class="id-cell">#${d.id}</td>
+        <td class="gmail-cell">${d.gmail}</td>
+        <td class="farm-cell" style="color:${farmColor(d.valid_pct)};">${d.valid_pct}%</td>
+        ${cells}
+      </tr>`;
+    }).join('')}</tbody>`;
+}
+
+const gmails=[...new Set(DATA.map(d=>d.gmail))].sort();
+const sel=document.getElementById('filter-gmail');
+gmails.forEach(g=>{const o=document.createElement('option');o.value=g;o.textContent=g;sel.appendChild(o);});
+
+const allDocs=[...new Set(DATA.flatMap(d=>d.docs.map(x=>x.doc)))].sort();
+const dsel=document.getElementById('filter-doc');
+allDocs.forEach(d=>{const o=document.createElement('option');o.value=d;o.textContent=d;dsel.appendChild(o);});
+
+render();
+</script>
+</body>
+</html>
