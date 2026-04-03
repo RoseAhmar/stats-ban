@@ -292,10 +292,13 @@
     <table class="heatmap-table" id="heatmap"></table>
     <div class="legend">
       <span style="font-weight:600;">Верификация:</span>
-      <span class="legend-item"><span class="legend-box" style="background:#E3F3D5;"></span>80% и выше</span>
-      <span class="legend-item"><span class="legend-box" style="background:#FEF0D8;"></span>60–79%</span>
-      <span class="legend-item"><span class="legend-box" style="background:#FDEAEA;"></span>ниже 60%</span>
-      <span class="legend-item"><span class="legend-box" style="background:#f0efeb;border:1px solid #ddd;"></span>нет данных</span>
+      <span class="legend-item"><span style="font-weight:700;color:#4caf50;">90%+</span></span>
+      <span class="legend-item"><span style="font-weight:700;color:#8bc34a;">80–89%</span></span>
+      <span class="legend-item"><span style="font-weight:700;color:#ffc107;">70–79%</span></span>
+      <span class="legend-item"><span style="font-weight:700;color:#ff9800;">60–69%</span></span>
+      <span class="legend-item"><span style="font-weight:700;color:#f44336;">50–59%</span></span>
+      <span class="legend-item"><span style="font-weight:700;color:#c62828;">ниже 50%</span></span>
+      <span class="legend-item"><span style="color:#555;">— нет данных</span></span>
     </div>
   </div>
   </div><!-- /tab-purchases -->
@@ -343,7 +346,14 @@ function loadComment(id) {
 
 function farmColor(p){return p>=80?'#3a7d15':p>=60?'#9a5c08':'#c02020';}
 function verColor(p){return p>=80?'#3a7d15':p>=60?'#9a5c08':'#c02020';}
-function verBg(p){return p>=80?{bg:'#E3F3D5',c:'#2d6010'}:p>=60?{bg:'#FEF0D8',c:'#7a4a08'}:{bg:'#FDEAEA',c:'#8f2020'};}
+function verBg(p){
+  if(p>=90) return {bg:'transparent',c:'#4caf50',bar:'#4caf50'};
+  if(p>=80) return {bg:'transparent',c:'#8bc34a',bar:'#8bc34a'};
+  if(p>=70) return {bg:'transparent',c:'#ffc107',bar:'#ffc107'};
+  if(p>=60) return {bg:'transparent',c:'#ff9800',bar:'#ff9800'};
+  if(p>=50) return {bg:'transparent',c:'#f44336',bar:'#f44336'};
+  return {bg:'transparent',c:'#c62828',bar:'#c62828'};
+}
 function badgeClass(p){return p>=80?'badge-green':p>=60?'badge-amber':'badge-red';}
 
 function getFiltered(){
@@ -565,7 +575,7 @@ function render(){
     <tbody>${data.map(d=>{
       const cells=docs.map(doc=>{
         const f=d.docs.find(x=>x.doc===doc);
-        if(!f||f.vna===0) return `<td style="background:#f7f7f5;color:#ccc;">—</td>`;
+        if(!f||f.vna===0) return `<td style="color:#555;">—</td>`;
         const c=verBg(f.success_pct);
         const bans=f.bans||{};
         const banKeys=Object.keys(bans);
@@ -589,7 +599,7 @@ function render(){
           ...banRows
         ];
         const dataAttr = encodeURIComponent(JSON.stringify({title: doc+' #'+d.id, rows: allRows}));
-        return `<td class="hm-cell" style="background:${c.bg};color:${c.c};cursor:pointer;"
+        return `<td class="hm-cell" style="color:${c.c};font-weight:700;cursor:pointer;border-bottom:2px solid ${c.bar};"
           onmouseenter="const p=JSON.parse(decodeURIComponent('${dataAttr}'));showHmPopup(event,p.title,p.rows)"
           onmouseleave="hideHmPopup()"
         >${f.success_pct}%</td>`;
