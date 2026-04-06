@@ -260,11 +260,11 @@
   <div class="heatmap-section">
     <table class="heatmap-table" id="heatmap"></table>
     <div class="legend">
-      <span style="font-weight:600;">Верификация:</span>
-      <span class="legend-item"><span class="legend-box" style="background:#E3F3D5;"></span>80% и выше</span>
-      <span class="legend-item"><span class="legend-box" style="background:#FEF0D8;"></span>60–79%</span>
-      <span class="legend-item"><span class="legend-box" style="background:#FDEAEA;"></span>ниже 60%</span>
-      <span class="legend-item"><span class="legend-box" style="background:#f0efeb;border:1px solid #ddd;"></span>нет данных</span>
+      <span style="font-weight:600;color:#555552;">Верификация:</span>
+      <span class="legend-item"><span class="legend-box" style="background:#1d2b1a;border:1px solid #3a5c30;"></span><span style="color:#6db85a;">80% и выше</span></span>
+      <span class="legend-item"><span class="legend-box" style="background:#2b2318;border:1px solid #5c4020;"></span><span style="color:#d4944a;">60–79%</span></span>
+      <span class="legend-item"><span class="legend-box" style="background:#2b1a1a;border:1px solid #5c2a2a;"></span><span style="color:#c05050;">ниже 60%</span></span>
+      <span class="legend-item"><span class="legend-box" style="background:#222220;border:1px solid #383836;"></span><span style="color:#555552;">нет данных</span></span>
     </div>
   </div>
   </div><!-- /tab-purchases -->
@@ -534,8 +534,8 @@ function render(){
     <tbody>${data.map(d=>{
       const cells=docs.map(doc=>{
         const f=d.docs.find(x=>x.doc===doc);
-        if(!f||f.vna===0) return `<td style="background:#f7f7f5;color:#ccc;">—</td>`;
-        const c=verBg(f.success_pct);
+        if(!f||f.vna===0) return `<td style="background:#222220;color:#383836;">—</td>`;
+        const c=f.success_pct>=80?{bg:'#1d2b1a',c:'#6db85a'}:f.success_pct>=60?{bg:'#2b2318',c:'#d4944a'}:{bg:'#2b1a1a',c:'#c05050'};
         const bans=f.bans||{};
         const banKeys=Object.keys(bans);
         let tooltipRows='';
