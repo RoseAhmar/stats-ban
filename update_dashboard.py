@@ -63,7 +63,7 @@ def fetch_tasks_batch(headers, archived=False):
             "page": page,
             "limit": 100,
             "include_closed": "true",
-            "date_created_gt": 1772323200000,  # 1 марта 2026 UTC
+            "date_created_gt": 1772319599999,  # чуть раньше 1 марта 2026 00:00 Europe/Brussels (UTC+1)
             "date_created_lt": int(datetime.now().timestamp() * 1000),  # сейчас
         }
         if archived:
@@ -175,7 +175,7 @@ def pct(n, base):
 
 def compute_data(rows):
     # Фильтр по дате создания задачи: 1 марта 2026 — сейчас
-    DATE_START_MS = 1772323200000
+    DATE_START_MS = 1772319600000  # March 1 2026 00:00 Europe/Brussels (UTC+1)
     DATE_END_MS   = int(datetime.now().timestamp() * 1000)
 
     by_id = {}
@@ -205,6 +205,10 @@ def compute_data(rows):
                  and r.get("internal_status") in ("DONE", "на выдачу", "На выдачу")]
     reserve_mar_global = sum(1 for r in all_valid if int(r.get("date_created") or 0) < APR_SPLIT)
     reserve_apr_global = sum(1 for r in all_valid if int(r.get("date_created") or 0) >= APR_SPLIT)
+
+    # Глобальный тотал (все задачи в периоде, как в ClickUp)
+    total_mar_global = sum(1 for r in rows if DATE_START_MS <= int(r.get("date_created") or 0) < APR_SPLIT)
+    total_apr_global = sum(1 for r in rows if APR_SPLIT <= int(r.get("date_created") or 0) <= DATE_END_MS)
 
     # Реальный тотал
     real_totals = {k: len(v) for k, v in by_id.items()}
@@ -326,7 +330,8 @@ def compute_data(rows):
 
     # Сортируем по дате создания + ID
     purchases.sort(key=lambda x: (x["date_created_ms"], int(x["id"]) if x["id"].isdigit() else 0))
-    return purchases, {"mar": reserve_mar_global, "apr": reserve_apr_global}
+    return purchases, {"mar": reserve_mar_global, "apr": reserve_apr_global,
+                       "total_mar": total_mar_global, "total_apr": total_apr_global}
 
 # ─── СТАТИСТИКА ПО БАЕРАМ ────────────────────────────────────
 def compute_buyers_data(rows, date_start_ms=None, date_end_ms=None):

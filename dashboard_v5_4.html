@@ -376,7 +376,7 @@ function fmtDate(ms){
 
 function render(){
   const data=getFiltered();
-  const tot=data.reduce((s,d)=>s+Number(d.total),0);
+  const tot=activePeriod==='all'?data.reduce((s,d)=>s+Number(d.total),0):(RESERVE_TOTALS['total_'+activePeriod]||data.reduce((s,d)=>s+Number(d.total),0));
   const val=data.reduce((s,d)=>s+Number(d.valid),0);
   const inv=data.reduce((s,d)=>s+Number(d.invalid),0);
   const totalReserve=activePeriod==='all'?data.reduce((s,d)=>s+Number(d.reserve||0),0):(RESERVE_TOTALS[activePeriod]||0);
