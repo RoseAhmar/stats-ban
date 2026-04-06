@@ -198,6 +198,14 @@ def compute_data(rows):
     print(f"  Пропущено вне даты (не март-апрель 2026): {skipped_out_date}")
     print(f"  Пропущено без даты: {skipped_no_date}")
 
+    # Глобальный резерв по дате задачи (для метрик, как в ClickUp)
+    APR_SPLIT = 1774994400000
+    all_valid = [r for r in rows
+                 if DATE_START_MS <= int(r.get("date_created") or 0) <= DATE_END_MS
+                 and r.get("internal_status") in ("DONE", "на выдачу", "На выдачу")]
+    reserve_mar_global = sum(1 for r in all_valid if int(r.get("date_created") or 0) < APR_SPLIT)
+    reserve_apr_global = sum(1 for r in all_valid if int(r.get("date_created") or 0) >= APR_SPLIT)
+
     # Реальный тотал
     real_totals = {k: len(v) for k, v in by_id.items()}
 
@@ -215,10 +223,15 @@ def compute_data(rows):
         pust = sum(1 for r in group if r["internal_status"] == "no valid при заведении (пустышка)")
         after1 = sum(1 for r in group if r["internal_status"] == "no valid - после 1 логина")
         after_warm = sum(1 for r in group if r["internal_status"] == "no valid - после прогрева")
-        # В запасе = DONE + на выдачу (баер не важен)
-        done_count = sum(1 for r in group if r["internal_status"] == "DONE")
-        na_vydachu = sum(1 for r in group if r["internal_status"] == "на выдачу")
+        # В запасе = DONE + на выдачу (только задачи с gmail_seller, как group_f)
+        APR_SPLIT = 1774994400000  # April 1 00:00 Europe/Brussels (UTC+2)
+        _is_done = lambda r: r["internal_status"] == "DONE"
+        _is_nav  = lambda r: r["internal_status"] in ("на выдачу", "На выдачу")
+        done_count = sum(1 for r in group_f if _is_done(r))
+        na_vydachu = sum(1 for r in group_f if _is_nav(r))
         reserve = done_count + na_vydachu
+        reserve_mar = sum(1 for r in group_f if (_is_done(r) or _is_nav(r)) and int(r.get("date_created") or 0) < APR_SPLIT)
+        reserve_apr = sum(1 for r in group_f if (_is_done(r) or _is_nav(r)) and int(r.get("date_created") or 0) >= APR_SPLIT)
         gmails = [r["gmail_seller"] for r in group_f if r["gmail_seller"]]
         gmail = max(set(gmails), key=gmails.count) if gmails else "—"
 
@@ -305,24 +318,28 @@ def compute_data(rows):
             "after1": after1,
             "after_warm": after_warm,
             "reserve": reserve,
+            "reserve_mar": reserve_mar,
+            "reserve_apr": reserve_apr,
             "docs": docs,
             "date_created_ms": min_date,
         })
 
     # Сортируем по дате создания + ID
     purchases.sort(key=lambda x: (x["date_created_ms"], int(x["id"]) if x["id"].isdigit() else 0))
-    return purchases
+    return purchases, {"mar": reserve_mar_global, "apr": reserve_apr_global}
 
 # ─── СТАТИСТИКА ПО БАЕРАМ ────────────────────────────────────
-def compute_buyers_data(rows):
-    DATE_START_MS = 1772323200000
-    DATE_END_MS   = int(datetime.now().timestamp() * 1000)
+def compute_buyers_data(rows, date_start_ms=None, date_end_ms=None):
+    if date_start_ms is None:
+        date_start_ms = 1772323200000
+    if date_end_ms is None:
+        date_end_ms = int(datetime.now().timestamp() * 1000)
 
     # Берём только аккаунты прошедшие фарм (Выдан) в нужном диапазоне дат
     accounts = []
     for r in rows:
         dc = int(r.get("date_created") or 0)
-        if not (DATE_START_MS <= dc <= DATE_END_MS):
+        if not (date_start_ms <= dc <= date_end_ms):
             continue
         if r["internal_status"] not in VALID_INTERNAL:
             continue
@@ -425,11 +442,20 @@ def compute_buyers_data(rows):
     return buyers
 
 # ─── ОБНОВЛЕНИЕ HTML ─────────────────────────────────────────
-def update_html(data, buyers_data, html_content):
+def update_html(data, buyers_data, html_content, buyers_mar=None, buyers_apr=None, reserve_totals=None):
     new_data_str = "const DATA = " + json.dumps(data, ensure_ascii=False) + ";"
     updated = re.sub(r"const DATA = \[.*?\];", new_data_str, html_content, flags=re.DOTALL)
     new_buyers_str = "const BUYERS_DATA = " + json.dumps(buyers_data, ensure_ascii=False) + ";"
     updated = re.sub(r"const BUYERS_DATA = \[.*?\];", new_buyers_str, updated, flags=re.DOTALL)
+    if buyers_mar is not None:
+        new_buyers_mar_str = "const BUYERS_DATA_MAR = " + json.dumps(buyers_mar, ensure_ascii=False) + ";"
+        updated = re.sub(r"const BUYERS_DATA_MAR = \[.*?\];", new_buyers_mar_str, updated, flags=re.DOTALL)
+    if buyers_apr is not None:
+        new_buyers_apr_str = "const BUYERS_DATA_APR = " + json.dumps(buyers_apr, ensure_ascii=False) + ";"
+        updated = re.sub(r"const BUYERS_DATA_APR = \[.*?\];", new_buyers_apr_str, updated, flags=re.DOTALL)
+    if reserve_totals is not None:
+        new_rt_str = "const RESERVE_TOTALS = " + json.dumps(reserve_totals, ensure_ascii=False) + ";"
+        updated = re.sub(r"const RESERVE_TOTALS = \{.*?\};", new_rt_str, updated, flags=re.DOTALL)
     # Обновляем дату в заголовке
     now = datetime.now().strftime("%d.%m.%Y %H:%M")
     updated = re.sub(
@@ -499,10 +525,14 @@ def main():
 
     # 3. Считаем статистику
     print("\nСчитаю статистику...")
-    data = compute_data(rows)
+    data, reserve_totals = compute_data(rows)
     print(f"Закупок найдено: {len(data)}")
+    # April 1, 2026 00:00:00 Europe/Brussels (UTC+2) = March 31, 2026 22:00:00 UTC
+    APRIL_1_MS = 1774994400000
     buyers_data = compute_buyers_data(rows)
-    print(f"Баеров найдено: {len(buyers_data)}")
+    buyers_mar = compute_buyers_data(rows, date_end_ms=APRIL_1_MS - 1)
+    buyers_apr = compute_buyers_data(rows, date_start_ms=APRIL_1_MS)
+    print(f"Баеров найдено: {len(buyers_data)} (март: {len(buyers_mar)}, апрель: {len(buyers_apr)})")
 
     # 4. Генерируем превью HTML локально
     print("\nГенерирую превью HTML...")
@@ -510,7 +540,7 @@ def main():
     with open(template_path, "r", encoding="utf-8") as f:
         html_content = f.read()
 
-    updated_html = update_html(data, buyers_data, html_content)
+    updated_html = update_html(data, buyers_data, html_content, buyers_mar=buyers_mar, buyers_apr=buyers_apr, reserve_totals=reserve_totals)
 
     # Сохраняем локально для превью
     with open("dashboard_preview.html", "w", encoding="utf-8") as f:
