@@ -223,6 +223,12 @@ def compute_data(rows):
         # Выдан + баер указан = произведено аккаунтов
         val = [r for r in group if r["internal_status"] in VALID_INTERNAL and r["buyer"]]
         inval = [r for r in group_f if r["internal_status"] in INVALID_INTERNAL]
+
+        # Новая логика валидности фарма: прошли / (прошли + провалили), без "не проверено"
+        FARM_PASS = ("Выдан", "DONE", "на выдачу", "На выдачу")
+        passed_farm = [r for r in group if r["gmail_seller"] and r["internal_status"] in FARM_PASS]
+        not_checked = sum(1 for r in group if r["gmail_seller"] and not r["internal_status"])
+        farm_checked = len(passed_farm) + len(inval)
         # Считаем из всей группы (не только с gmail+status)
         pust = sum(1 for r in group if r["internal_status"] == "no valid при заведении (пустышка)")
         after1 = sum(1 for r in group if r["internal_status"] == "no valid - после 1 логина")
@@ -317,7 +323,9 @@ def compute_data(rows):
             "real_total": real_totals.get(id_buy, total),
             "valid": len(val),
             "invalid": len(inval),
-            "valid_pct": pct(len(val), total),
+            "passed_farm": len(passed_farm),
+            "not_checked": not_checked,
+            "valid_pct": pct(len(passed_farm), farm_checked),
             "pustishka": pustishka,
             "after1": after1,
             "after_warm": after_warm,

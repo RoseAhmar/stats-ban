@@ -386,15 +386,18 @@ function render(){
   const tot=activePeriod==='all'?data.reduce((s,d)=>s+Number(d.total),0):(RESERVE_TOTALS['total_'+activePeriod]||data.reduce((s,d)=>s+Number(d.total),0));
   const val=data.reduce((s,d)=>s+Number(d.valid),0);
   const inv=data.reduce((s,d)=>s+Number(d.invalid),0);
+  const passedFarm=data.reduce((s,d)=>s+Number(d.passed_farm||0),0);
+  const notChecked=data.reduce((s,d)=>s+Number(d.not_checked||0),0);
+  const farmChecked=passedFarm+inv;
   const totalReserve=activePeriod==='all'?data.reduce((s,d)=>s+Number(d.reserve||0),0):(RESERVE_TOTALS[activePeriod]||0);
   const totalAfter1=data.reduce((s,d)=>s+Number(d.after1||0),0);
   const totalAfterWarm=data.reduce((s,d)=>s+Number(d.after_warm||0),0);
   const totalPust=data.reduce((s,d)=>s+Math.max(0,Number(d.invalid||0)-Number(d.after1||0)-Number(d.after_warm||0)),0);
-  const farmPct=tot?Math.round(val/tot*1000)/10:0;
-  const invPct=tot?Math.round(inv/tot*1000)/10:0;
-  const pustPct=tot?Math.round(totalPust/tot*1000)/10:0;
-  const after1Pct=tot?Math.round(totalAfter1/tot*1000)/10:0;
-  const afterWarmPct=tot?Math.round(totalAfterWarm/tot*1000)/10:0;
+  const farmPct=farmChecked?Math.round(passedFarm/farmChecked*1000)/10:0;
+  const invPct=farmChecked?Math.round(inv/farmChecked*1000)/10:0;
+  const pustPct=farmChecked?Math.round(totalPust/farmChecked*1000)/10:0;
+  const after1Pct=farmChecked?Math.round(totalAfter1/farmChecked*1000)/10:0;
+  const afterWarmPct=farmChecked?Math.round(totalAfterWarm/farmChecked*1000)/10:0;
   const wv=data.flatMap(d=>d.docs).filter(d=>Number(d.vna)>0);
   const avgVer=wv.length?Math.round(wv.reduce((s,d)=>s+Number(d.success_pct),0)/wv.length*10)/10:0;
 
@@ -431,10 +434,12 @@ function render(){
       <div class="metric-label">Валидность почт после фарма</div>
       <div class="metric-value">${farmPct}%</div>
       <div class="metric-hint" style="margin-top:4px;">
+        <div style="color:#888780;font-size:11px;margin-bottom:4px;">из ${farmChecked.toLocaleString()} проверенных</div>
         потери: ${invPct}%
         ${pustPct>0?`<div style="margin-top:3px;display:flex;justify-content:space-between;"><span>пустышки</span><span style="font-weight:500;">${pustPct}% (${totalPust})</span></div>`:''}
         ${after1Pct>0?`<div style="display:flex;justify-content:space-between;"><span>после 1 логина</span><span style="font-weight:500;">${after1Pct}% (${totalAfter1})</span></div>`:''}
         ${afterWarmPct>0?`<div style="display:flex;justify-content:space-between;"><span>после прогрева</span><span style="font-weight:500;">${afterWarmPct}% (${totalAfterWarm})</span></div>`:''}
+        ${notChecked>0?`<div style="margin-top:5px;display:flex;justify-content:space-between;color:#666664;"><span>⏳ не проверено</span><span style="font-weight:500;">${notChecked.toLocaleString()}</span></div>`:''}
       </div>
     </div>
     <div class="metric">
