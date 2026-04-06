@@ -2,13 +2,17 @@ import requests
 import json
 import re
 import base64
+import os
 from datetime import datetime
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # ─── НАСТРОЙКИ ───────────────────────────────────────────────
-CLICKUP_TOKEN = "YOUR_CLICKUP_TOKEN"
+CLICKUP_TOKEN = os.getenv("CLICKUP_TOKEN")
 CLICKUP_LIST_ID = "901112676641"
 
-GITHUB_TOKEN = "YOUR_GITHUB_TOKEN"
+GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
 GITHUB_REPO = "RoseAhmar/stats-ban"
 GITHUB_FILE = "index.html"
 
