@@ -290,6 +290,13 @@
         </select>
       </div>
     </div>
+    <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:1rem;font-size:12px;color:#888780;">
+      <span style="font-weight:600;">Верификация:</span>
+      <span style="display:flex;align-items:center;gap:5px;"><span style="width:12px;height:12px;border-radius:3px;background:#3a7d15;display:inline-block;"></span>Прошли</span>
+      <span style="display:flex;align-items:center;gap:5px;"><span style="width:12px;height:12px;border-radius:3px;background:#c02020;display:inline-block;"></span>На замену</span>
+      <span style="display:flex;align-items:center;gap:5px;"><span style="width:12px;height:12px;border-radius:3px;background:#185FA5;display:inline-block;"></span>В очереди (Ready to work, Review и др.)</span>
+      <span style="display:flex;align-items:center;gap:5px;"><span style="width:12px;height:12px;border-radius:3px;background:#534AB7;display:inline-block;"></span>Прочие статусы</span>
+    </div>
     <div class="buyer-cards" id="buyer-cards"></div>
   </div><!-- /tab-buyers -->
 
@@ -619,7 +626,14 @@ function renderBuyers(){
     document.getElementById('buyer-cards').innerHTML='<div class="empty-state">Нет данных — запустите скрипт обновления</div>';
     return;
   }
-  const bfilter = document.getElementById('buyer-filter') ? document.getElementById('buyer-filter').value : '';
+  const sel = document.getElementById('buyer-filter');
+  if(sel){
+    const prev = sel.value;
+    sel.innerHTML = '<option value="">Все</option>';
+    data.forEach(b=>{const o=document.createElement('option');o.value=b.buyer;o.textContent=b.buyer;sel.appendChild(o);});
+    sel.value = data.find(b=>b.buyer===prev) ? prev : '';
+  }
+  const bfilter = sel ? sel.value : '';
   const filteredData = bfilter ? data.filter(b=>b.buyer===bfilter) : data;
 
   const totAccounts=filteredData.reduce((s,b)=>s+b.total,0);
@@ -717,15 +731,6 @@ function switchTab(name){
   if(name==='buyers') renderBuyers();
 }
 
-(function(){
-  const sel = document.getElementById('buyer-filter');
-  if(!sel) return;
-  BUYERS_DATA.forEach(b=>{
-    const o = document.createElement('option');
-    o.value = b.buyer; o.textContent = b.buyer;
-    sel.appendChild(o);
-  });
-})();
 renderBuyers();
 </script>
 
