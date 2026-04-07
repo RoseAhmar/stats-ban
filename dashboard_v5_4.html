@@ -704,7 +704,10 @@ function renderBuyers(){
         <div class="buyer-name">${b.buyer}</div>
         <span class="buyer-pct" style="color:${clr}">${b.success_pct}%</span>
       </div>
-      <div class="buyer-total">${t} аккаунтов выдано</div>
+      <div style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin-bottom:2px;">
+        <div class="buyer-total">${t} аккаунтов выдано</div>
+        ${(b.zamena_count||0)>0?`<div style="font-size:12px;color:#888780;">= <span style="color:#fff;font-weight:600;">${t-(b.zamena_count||0)}</span> платных + <span style="color:#d4944a;font-weight:600;">${b.zamena_count}</span> замен</div>`:''}
+      </div>
       <div class="buyer-stack">
         <div style="width:${pPass}%;background:#3a7d15;"></div>
         <div style="width:${pFail}%;background:#c02020;"></div>
@@ -714,7 +717,6 @@ function renderBuyers(){
       <div class="buyer-tags">
         ${b.passed>0?`<span class="stag stag-pass">прошли: ${b.passed}</span>`:''}
         ${b.failed>0?`<span class="stag stag-fail">на замену/заменен: ${b.failed}</span>`:''}
-        ${(b.zamena_count||0)>0?`<span class="stag stag-other" title="Аккаунты с тегом zamena — замена выполнена">🔄 замен получено: ${b.zamena_count}</span>`:''}
         ${b.queued>0?`<span class="stag stag-queue">в очереди: ${b.queued}</span>`:''}
         ${b.others>0?`<span class="stag stag-other">прочие: ${b.others}</span>`:''}
       </div>
