@@ -24,6 +24,7 @@ FIELD_ACCOUNT_STATUS = "Account Status"
 FIELD_TYPE_BAN = "Тип бана"
 FIELD_ID_BUY = "ID_buy"
 FIELD_BUYER = "Баер (для кого)"
+FIELD_DATE_ZAMENA = "Дата 2-го логина"
 
 # ─── СТАТУСЫ ─────────────────────────────────────────────────
 VALID_INTERNAL = ["Выдан"]
@@ -137,6 +138,18 @@ def get_field(task, field_name):
             return str(val).strip() if str(val).strip() else None
     return None
 
+def get_field_raw_date(task, field_name):
+    """Возвращает сырое числовое значение date-поля (timestamp ms)."""
+    for f in task.get("custom_fields", []):
+        if f.get("name", "").lower() == field_name.lower():
+            val = f.get("value")
+            if val is not None:
+                try:
+                    return int(val)
+                except (ValueError, TypeError):
+                    return None
+    return None
+
 def debug_field(tasks, field_name, limit=3):
     """Печатает сырую структуру поля для отладки."""
     found = 0
@@ -168,6 +181,7 @@ def parse_tasks(tasks):
             "id_buy": get_field(t, FIELD_ID_BUY),
             "buyer": get_field(t, FIELD_BUYER),
             "has_zamena_tag": any(tag.get("name", "").lower() == "zamena" for tag in t.get("tags", [])),
+            "date_zamena_ms": int(get_field_raw_date(t, FIELD_DATE_ZAMENA) or 0),
         }
         rows.append(row)
     return rows
@@ -351,6 +365,18 @@ def compute_buyers_data(rows, date_start_ms=None, date_end_ms=None):
     if date_end_ms is None:
         date_end_ms = int(datetime.now().timestamp() * 1000)
 
+    # Zamena counts по дате замены (date_zamena_ms), независимо от даты создания
+    zamena_by_buyer = {}
+    for r in rows:
+        if not r.get("has_zamena_tag"):
+            continue
+        dz = int(r.get("date_zamena_ms") or 0)
+        if not dz or not (date_start_ms <= dz <= date_end_ms):
+            continue
+        buyer = r.get("buyer")
+        if buyer:
+            zamena_by_buyer[buyer] = zamena_by_buyer.get(buyer, 0) + 1
+
     # Берём только аккаунты прошедшие фарм (Выдан) в нужном диапазоне дат
     accounts = []
     for r in rows:
@@ -378,7 +404,7 @@ def compute_buyers_data(rows, date_start_ms=None, date_end_ms=None):
         # Группировка по 4 категориям
         passed   = sum(1 for r in group if r["account_status"] in VERIFIED_STATUSES)
         na_zam   = sum(1 for r in group if r["account_status"] in FAILED_STATUSES)
-        zamena_count = sum(1 for r in group if r.get("has_zamena_tag"))
+        zamena_count = zamena_by_buyer.get(buyer, 0)
         queue_upper = [s.upper() for s in QUEUE_STATUSES]
         queued   = sum(1 for r in group if r["account_status"] and r["account_status"].strip().upper() in queue_upper)
         all_known = set(VERIFIED_STATUSES) | set(FAILED_STATUSES) | set(QUEUE_STATUSES)
