@@ -713,7 +713,8 @@ function renderBuyers(){
       </div>
       <div class="buyer-tags">
         ${b.passed>0?`<span class="stag stag-pass">прошли: ${b.passed}</span>`:''}
-        ${b.failed>0?`<span class="stag stag-fail">на замену: ${b.failed}</span>`:''}
+        ${b.failed>0?`<span class="stag stag-fail">на замену/заменен: ${b.failed}</span>`:''}
+        ${(b.zamena_count||0)>0?`<span class="stag stag-other" title="Аккаунты с тегом zamena — замена выполнена">🔄 замен получено: ${b.zamena_count}</span>`:''}
         ${b.queued>0?`<span class="stag stag-queue">в очереди: ${b.queued}</span>`:''}
         ${b.others>0?`<span class="stag stag-other">прочие: ${b.others}</span>`:''}
       </div>

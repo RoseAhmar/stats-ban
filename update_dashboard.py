@@ -45,6 +45,8 @@ QUEUE_STATUSES = [
     "НА ВЕРИФ", "Business Verification",
 ]
 NA_ZAMENU = "НА ЗАМЕНУ"
+ZAMENEN = "Заменен"
+FAILED_STATUSES = (NA_ZAMENU, ZAMENEN)
 # Все doc seller учитываются
 BAN_TYPES = [
     "Бан по докам", "Упал на номер", "Мультиакк",
@@ -165,6 +167,7 @@ def parse_tasks(tasks):
             "type_ban": get_field(t, FIELD_TYPE_BAN),
             "id_buy": get_field(t, FIELD_ID_BUY),
             "buyer": get_field(t, FIELD_BUYER),
+            "has_zamena_tag": any(tag.get("name", "").lower() == "zamena" for tag in t.get("tags", [])),
         }
         rows.append(row)
     return rows
@@ -254,7 +257,7 @@ def compute_data(rows):
             dg = [r for r in doc_group_all if r["doc_seller"] == doc]
             dval = [r for r in dg if r["internal_status"] in VALID_INTERNAL]
             passed = [r for r in dval if r["account_status"] in VERIFIED_STATUSES]
-            failed = [r for r in dval if r["account_status"] == NA_ZAMENU]
+            failed = [r for r in dval if r["account_status"] in FAILED_STATUSES]
             total_vna = len(passed) + len(failed)
             not_yet = len(dval) - total_vna
 
@@ -374,10 +377,11 @@ def compute_buyers_data(rows, date_start_ms=None, date_end_ms=None):
 
         # Группировка по 4 категориям
         passed   = sum(1 for r in group if r["account_status"] in VERIFIED_STATUSES)
-        na_zam   = sum(1 for r in group if r["account_status"] == NA_ZAMENU)
+        na_zam   = sum(1 for r in group if r["account_status"] in FAILED_STATUSES)
+        zamena_count = sum(1 for r in group if r.get("has_zamena_tag"))
         queue_upper = [s.upper() for s in QUEUE_STATUSES]
         queued   = sum(1 for r in group if r["account_status"] and r["account_status"].strip().upper() in queue_upper)
-        all_known = set(VERIFIED_STATUSES) | {NA_ZAMENU} | set(QUEUE_STATUSES)
+        all_known = set(VERIFIED_STATUSES) | set(FAILED_STATUSES) | set(QUEUE_STATUSES)
         others   = sum(1 for r in group if r["account_status"] and r["account_status"] not in all_known)
         no_status = sum(1 for r in group if not r["account_status"])
         vna_total = passed + na_zam
@@ -391,12 +395,12 @@ def compute_buyers_data(rows, date_start_ms=None, date_end_ms=None):
         doc_stats = []
         for doc, dg in sorted(by_doc.items()):
             dp = sum(1 for r in dg if r["account_status"] in VERIFIED_STATUSES)
-            df = sum(1 for r in dg if r["account_status"] == NA_ZAMENU)
+            df = sum(1 for r in dg if r["account_status"] in FAILED_STATUSES)
             dq = sum(1 for r in dg if r["account_status"] and r["account_status"].strip().upper() in queue_upper)
             do = sum(1 for r in dg if r["account_status"] and r["account_status"] not in all_known)
             dvna = dp + df
             # Причины замены
-            failed_rows = [r for r in dg if r["account_status"] == NA_ZAMENU]
+            failed_rows = [r for r in dg if r["account_status"] in FAILED_STATUSES]
             ban_counts = {}
             for r in failed_rows:
                 bt = r["type_ban"] or "Без причины"
@@ -422,7 +426,7 @@ def compute_buyers_data(rows, date_start_ms=None, date_end_ms=None):
         gmail_stats = []
         for gmail, gg in sorted(by_gmail.items()):
             gp = sum(1 for r in gg if r["account_status"] in VERIFIED_STATUSES)
-            gf = sum(1 for r in gg if r["account_status"] == NA_ZAMENU)
+            gf = sum(1 for r in gg if r["account_status"] in FAILED_STATUSES)
             gvna = gp + gf
             gmail_stats.append({
                 "gmail": gmail,
@@ -440,6 +444,7 @@ def compute_buyers_data(rows, date_start_ms=None, date_end_ms=None):
             "total": len(group),
             "passed": passed,
             "failed": na_zam,
+            "zamena_count": zamena_count,
             "queued": queued,
             "others": others,
             "no_status": no_status,
