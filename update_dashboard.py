@@ -25,6 +25,7 @@ FIELD_TYPE_BAN = "Тип бана"
 FIELD_ID_BUY = "ID_buy"
 FIELD_BUYER = "Баер (для кого)"
 FIELD_DATE_ZAMENA = "Дата 2-го логина"
+FIELD_DATE_VYDACHI = "Дата выдачи"
 
 # ─── СТАТУСЫ ─────────────────────────────────────────────────
 VALID_INTERNAL = ["Выдан"]
@@ -66,8 +67,6 @@ def fetch_tasks_batch(headers, archived=False):
             "page": page,
             "limit": 100,
             "include_closed": "true",
-            "date_created_gt": 1772319599999,  # чуть раньше 1 марта 2026 00:00 Europe/Brussels (UTC+1)
-            "date_created_lt": int(datetime.now().timestamp() * 1000),  # сейчас
         }
         if archived:
             params["archived"] = "true"
@@ -182,6 +181,7 @@ def parse_tasks(tasks):
             "buyer": get_field(t, FIELD_BUYER),
             "has_zamena_tag": any(tag.get("name", "").lower() == "zamena" for tag in t.get("tags", [])),
             "date_zamena_ms": int(get_field_raw_date(t, FIELD_DATE_ZAMENA) or 0),
+            "date_vydachi_ms": int(get_field_raw_date(t, FIELD_DATE_VYDACHI) or 0),
         }
         rows.append(row)
     return rows
@@ -377,11 +377,11 @@ def compute_buyers_data(rows, date_start_ms=None, date_end_ms=None):
         if buyer:
             zamena_by_buyer[buyer] = zamena_by_buyer.get(buyer, 0) + 1
 
-    # Берём только аккаунты прошедшие фарм (Выдан) в нужном диапазоне дат
+    # Берём только аккаунты прошедшие фарм (Выдан), фильтр по Дата выдачи
     accounts = []
     for r in rows:
-        dc = int(r.get("date_created") or 0)
-        if not (date_start_ms <= dc <= date_end_ms):
+        dv = int(r.get("date_vydachi_ms") or 0)
+        if not dv or not (date_start_ms <= dv <= date_end_ms):
             continue
         if r["internal_status"] not in VALID_INTERNAL:
             continue
