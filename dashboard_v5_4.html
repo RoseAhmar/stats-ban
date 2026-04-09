@@ -212,6 +212,9 @@
 <div class="dash">
 
   <div class="page-header">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;">
+      <a href="index.html" style="font-size:12px;color:#888780;text-decoration:none;border:1px solid #d0cec8;border-radius:5px;padding:4px 10px;transition:color .15s;" onmouseover="this.style.color='#1c1c1a'" onmouseout="this.style.color='#888780'">← Главное меню</a>
+    </div>
     <div class="page-title">Закупки аккаунтов</div>
     <div class="page-sub">Почты → фарм → аккаунты → верификация, обновлено 02.04.2026 22:23</div>
   </div>
@@ -225,6 +228,7 @@
   <div class="tabs">
     <button class="tab-btn active" onclick="switchTab('purchases')">Закупки</button>
     <button class="tab-btn" onclick="switchTab('buyers')">Баера</button>
+    <button class="tab-btn" onclick="switchTab('docsellers')">Doc Sellers</button>
   </div>
 
   <div class="tab-page active" id="tab-purchases">
@@ -300,6 +304,20 @@
     <div class="buyer-cards" id="buyer-cards"></div>
   </div><!-- /tab-buyers -->
 
+  <div class="tab-page" id="tab-docsellers">
+    <div class="top-metrics" id="docsellers-metrics"></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:1.5rem;margin-bottom:1rem;">
+      <div class="section-label" style="margin:0;">Карточки Doc Sellers</div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <label style="font-size:13px;color:#888780;font-weight:500;">Seller:</label>
+        <select id="docseller-filter" onchange="renderDocSellers()" style="font-size:13px;font-family:Inter,sans-serif;padding:5px 10px;border:1px solid rgba(0,0,0,0.15);border-radius:8px;background:#f7f7f5;color:#1c1c1a;cursor:pointer;outline:none;">
+          <option value="">Все</option>
+        </select>
+      </div>
+    </div>
+    <div class="buyer-cards" id="docseller-cards"></div>
+  </div><!-- /tab-docsellers -->
+
 </div>
 
 <script>
@@ -308,6 +326,9 @@ const BUYERS_DATA = [];
 const RESERVE_TOTALS = {"mar": 0, "apr": 0};
 const BUYERS_DATA_MAR = [];
 const BUYERS_DATA_APR = [];
+const DOC_SELLERS_DATA = [];
+const DOC_SELLERS_DATA_MAR = [];
+const DOC_SELLERS_DATA_APR = [];
 const APRIL_1_MS = 1774994400000; // April 1 00:00 Europe/Brussels (UTC+2)
 let activePeriod = 'apr';
 
@@ -346,6 +367,8 @@ function setPeriod(p) {
   render();
   const buyersTab = document.getElementById('tab-buyers');
   if(buyersTab && buyersTab.classList.contains('active')) renderBuyers();
+  const docSellersTab = document.getElementById('tab-docsellers');
+  if(docSellersTab && docSellersTab.classList.contains('active')) renderDocSellers();
 }
 
 function getFiltered(){
@@ -384,7 +407,7 @@ function fmtDate(ms){
 function render(){
   const data=getFiltered();
   const tot=activePeriod==='all'?data.reduce((s,d)=>s+Number(d.total),0):(RESERVE_TOTALS['total_'+activePeriod]||data.reduce((s,d)=>s+Number(d.total),0));
-  const val=data.reduce((s,d)=>s+Number(d.valid),0);
+  const val=activePeriod==='all'?data.reduce((s,d)=>s+Number(d.valid),0):(RESERVE_TOTALS['produced_'+activePeriod]||data.reduce((s,d)=>s+Number(d.valid),0));
   const inv=data.reduce((s,d)=>s+Number(d.invalid),0);
   const passedFarm=data.reduce((s,d)=>s+Number(d.passed_farm||0),0);
   const notChecked=data.reduce((s,d)=>s+Number(d.not_checked||0),0);
@@ -730,14 +753,100 @@ function renderBuyers(){
   }).join('');
 }
 
+// DOC SELLERS
+function renderDocSellers(){
+  const data = activePeriod==='mar' ? DOC_SELLERS_DATA_MAR : activePeriod==='apr' ? DOC_SELLERS_DATA_APR : DOC_SELLERS_DATA;
+  if(!data||data.length===0){
+    document.getElementById('docseller-cards').innerHTML='<div class="empty-state">Нет данных — запустите скрипт обновления</div>';
+    return;
+  }
+  const sel = document.getElementById('docseller-filter');
+  if(sel){
+    const prev = sel.value;
+    sel.innerHTML = '<option value="">Все</option>';
+    data.forEach(s=>{const o=document.createElement('option');o.value=s.seller;o.textContent=s.seller;sel.appendChild(o);});
+    sel.value = data.find(s=>s.seller===prev) ? prev : '';
+  }
+  const sfilter = sel ? sel.value : '';
+  const filteredData = sfilter ? data.filter(s=>s.seller===sfilter) : data;
+
+  const totAccounts = filteredData.reduce((s,d)=>s+d.total,0);
+  const totPassed   = filteredData.reduce((s,d)=>s+d.passed,0);
+  const totFailed   = filteredData.reduce((s,d)=>s+d.failed,0);
+  const totQueued   = filteredData.reduce((s,d)=>s+d.queued,0);
+  const totVna      = filteredData.reduce((s,d)=>s+d.vna,0);
+  const avgPct      = totVna>0 ? Math.round(totPassed/totVna*100) : 0;
+
+  document.getElementById('docsellers-metrics').innerHTML=`
+    <div class="metric"><div class="metric-label">Аккаунтов выдано</div><div class="metric-value">${totAccounts.toLocaleString()}</div><div class="metric-hint">от ${filteredData.length} seller${filteredData.length===1?'а':'ов'}</div></div>
+    <div class="metric">
+      <div class="metric-label">Верификация</div>
+      <div class="metric-value" style="color:${verCol(avgPct)}">${avgPct}%</div>
+      <div class="metric-hint" style="margin-top:4px;">
+        из <b>${totVna.toLocaleString()}</b> дошедших до верификации
+        <div style="margin-top:4px;display:flex;justify-content:space-between;"><span>прошли</span><span style="font-weight:500;">${totPassed}</span></div>
+        <div style="display:flex;justify-content:space-between;"><span>на замену</span><span style="font-weight:500;">${totFailed}</span></div>
+        <div style="display:flex;justify-content:space-between;"><span>в очереди</span><span style="font-weight:500;">${totQueued}</span></div>
+      </div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">На замену</div>
+      <div class="metric-value" style="color:#c02020">${totFailed}</div>
+      <div class="metric-hint" style="margin-top:4px;">${totVna>0?Math.round(totFailed/totVna*100):0}% от дошедших до верификации</div>
+    </div>`;
+
+  document.getElementById('docseller-cards').innerHTML = filteredData.map(s=>{
+    const t = s.total;
+    const pPass  = t>0 ? Math.round(s.passed/t*100) : 0;
+    const pFail  = t>0 ? Math.round(s.failed/t*100) : 0;
+    const pQueue = t>0 ? Math.round(s.queued/t*100) : 0;
+    const clr = verCol(s.success_pct);
+
+    const buyerRows = (s.by_buyer||[]).map(b=>{
+      const bc = verCol(b.success_pct);
+      return `<div class="buyer-doc-row">
+        <span class="buyer-doc-name">${b.buyer}</span>
+        <span style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+          <span style="font-size:11px;color:#aaa;">${b.total} акк.</span>
+          ${b.passed>0 ? `<span class="stag stag-pass">прошли: ${b.passed}</span>` : ''}
+          ${b.failed>0 ? `<span class="stag stag-fail">замена: ${b.failed}</span>` : ''}
+          ${b.queued>0 ? `<span class="stag stag-queue">очередь: ${b.queued}</span>` : ''}
+          ${b.vna>0 ? `<span style="font-weight:600;color:${bc};min-width:40px;text-align:right;">${b.success_pct}%</span>` : ''}
+        </span>
+      </div>`;
+    }).join('');
+
+    return `<div class="buyer-card">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px;">
+        <div class="buyer-name">${s.seller}</div>
+        <span class="buyer-pct" style="color:${clr}">${s.success_pct}%</span>
+      </div>
+      <div class="buyer-total">${t} аккаунтов выдано</div>
+      <div class="buyer-stack">
+        <div style="width:${pPass}%;background:#3a7d15;"></div>
+        <div style="width:${pFail}%;background:#c02020;"></div>
+        <div style="width:${pQueue}%;background:#185FA5;"></div>
+      </div>
+      <div class="buyer-tags">
+        ${s.passed>0 ? `<span class="stag stag-pass">прошли: ${s.passed}</span>` : ''}
+        ${s.failed>0 ? `<span class="stag stag-fail">на замену: ${s.failed}</span>` : ''}
+        ${s.queued>0 ? `<span class="stag stag-queue">в очереди: ${s.queued}</span>` : ''}
+      </div>
+      ${buyerRows ? `<div class="divider"></div>${buyerRows}` : ''}
+    </div>`;
+  }).join('');
+}
+
 // TABS
 function switchTab(name){
   document.querySelectorAll('.tab-btn').forEach((b,i)=>{
-    b.classList.toggle('active',['purchases','buyers'][i]===name);
+    b.classList.toggle('active',['purchases','buyers','docsellers'][i]===name);
   });
   document.getElementById('tab-purchases').classList.toggle('active',name==='purchases');
   document.getElementById('tab-buyers').classList.toggle('active',name==='buyers');
+  document.getElementById('tab-docsellers').classList.toggle('active',name==='docsellers');
   if(name==='buyers') renderBuyers();
+  if(name==='docsellers') renderDocSellers();
 }
 
 renderBuyers();

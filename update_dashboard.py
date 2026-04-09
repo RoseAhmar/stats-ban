@@ -227,6 +227,14 @@ def compute_data(rows):
     total_mar_global = sum(1 for r in rows if DATE_START_MS <= int(r.get("date_created") or 0) < APR_SPLIT)
     total_apr_global = sum(1 for r in rows if APR_SPLIT <= int(r.get("date_created") or 0) <= DATE_END_MS)
 
+    # Глобальное "произведено" — все Выдан в периоде (включая без buyer/ID_buy)
+    produced_mar_global = sum(1 for r in rows
+                              if DATE_START_MS <= int(r.get("date_created") or 0) < APR_SPLIT
+                              and r.get("internal_status") in VALID_INTERNAL)
+    produced_apr_global = sum(1 for r in rows
+                              if APR_SPLIT <= int(r.get("date_created") or 0) <= DATE_END_MS
+                              and r.get("internal_status") in VALID_INTERNAL)
+
     # Реальный тотал
     real_totals = {k: len(v) for k, v in by_id.items()}
 
@@ -356,7 +364,8 @@ def compute_data(rows):
     # Сортируем по дате создания + ID
     purchases.sort(key=lambda x: (x["date_created_ms"], int(x["id"]) if x["id"].isdigit() else 0))
     return purchases, {"mar": reserve_mar_global, "apr": reserve_apr_global,
-                       "total_mar": total_mar_global, "total_apr": total_apr_global}
+                       "total_mar": total_mar_global, "total_apr": total_apr_global,
+                       "produced_mar": produced_mar_global, "produced_apr": produced_apr_global}
 
 # ─── СТАТИСТИКА ПО БАЕРАМ ────────────────────────────────────
 def compute_buyers_data(rows, date_start_ms=None, date_end_ms=None):
@@ -485,8 +494,166 @@ def compute_buyers_data(rows, date_start_ms=None, date_end_ms=None):
     buyers.sort(key=lambda x: x["total"], reverse=True)
     return buyers
 
+# ─── СТАТИСТИКА ПО DOC SELLERS ───────────────────────────────
+def compute_doc_sellers_data(rows, date_start_ms=None, date_end_ms=None):
+    if date_start_ms is None:
+        date_start_ms = 1772323200000
+    if date_end_ms is None:
+        date_end_ms = int(datetime.now().timestamp() * 1000)
+
+    accounts = []
+    for r in rows:
+        dv = int(r.get("date_vydachi_ms") or 0)
+        if not dv or not (date_start_ms <= dv <= date_end_ms):
+            continue
+        if r["internal_status"] not in VALID_INTERNAL:
+            continue
+        accounts.append(r)
+
+    by_seller = {}
+    for r in accounts:
+        doc = r.get("doc_seller") or "—"
+        by_seller.setdefault(doc, []).append(r)
+
+    queue_upper = [s.upper() for s in QUEUE_STATUSES]
+    all_known = set(VERIFIED_STATUSES) | set(FAILED_STATUSES) | set(QUEUE_STATUSES)
+    sellers = []
+    for seller, group in sorted(by_seller.items()):
+        passed  = sum(1 for r in group if r["account_status"] in VERIFIED_STATUSES)
+        failed  = sum(1 for r in group if r["account_status"] in FAILED_STATUSES)
+        queued  = sum(1 for r in group if r["account_status"] and r["account_status"].strip().upper() in queue_upper)
+        others  = sum(1 for r in group if r["account_status"] and r["account_status"] not in all_known)
+        no_status = sum(1 for r in group if not r["account_status"])
+        vna = passed + failed
+
+        # Разбивка по баерам
+        by_buyer = {}
+        for r in group:
+            b = r.get("buyer") or "—"
+            by_buyer.setdefault(b, []).append(r)
+        buyer_stats = []
+        for buyer, bg in sorted(by_buyer.items()):
+            bp = sum(1 for r in bg if r["account_status"] in VERIFIED_STATUSES)
+            bf = sum(1 for r in bg if r["account_status"] in FAILED_STATUSES)
+            bq = sum(1 for r in bg if r["account_status"] and r["account_status"].strip().upper() in queue_upper)
+            bvna = bp + bf
+            buyer_stats.append({
+                "buyer": buyer,
+                "total": len(bg),
+                "passed": bp,
+                "failed": bf,
+                "queued": bq,
+                "vna": bvna,
+                "success_pct": pct(bp, bvna),
+            })
+        buyer_stats.sort(key=lambda x: x["total"], reverse=True)
+
+        sellers.append({
+            "seller": seller,
+            "total": len(group),
+            "passed": passed,
+            "failed": failed,
+            "queued": queued,
+            "others": others,
+            "no_status": no_status,
+            "vna": vna,
+            "success_pct": pct(passed, vna),
+            "by_buyer": buyer_stats,
+        })
+
+    sellers.sort(key=lambda x: x["total"], reverse=True)
+    return sellers
+
+# ─── БИЛЛИНГ ─────────────────────────────────────────────────
+def compute_billing_data(rows, date_start_ms, date_end_ms, price_per_account=16):
+    from datetime import timezone, timedelta
+    APR_SPLIT = 1774994400000
+
+    # Аккаунты по дням (по Дата выдачи) — всё выданное баеру
+    buyer_daily = {}
+    for r in rows:
+        dv = int(r.get("date_vydachi_ms") or 0)
+        if not dv or not (date_start_ms <= dv <= date_end_ms):
+            continue
+        if r["internal_status"] not in VALID_INTERNAL:
+            continue
+        buyer = r.get("buyer")
+        if not buyer:
+            continue
+        offset_h = 2 if dv >= APR_SPLIT else 1
+        dt_local = datetime.fromtimestamp(dv / 1000, tz=timezone.utc) + timedelta(hours=offset_h)
+        date_str = dt_local.strftime("%Y-%m-%d")
+        if buyer not in buyer_daily:
+            buyer_daily[buyer] = {}
+        buyer_daily[buyer][date_str] = buyer_daily[buyer].get(date_str, 0) + 1
+
+    # Замены по date_zamena_ms — те что уже обработаны как замена в периоде
+    zamena_by_buyer = {}
+    zamena_daily_by_buyer = {}
+    for r in rows:
+        if not r.get("has_zamena_tag"):
+            continue
+        dz = int(r.get("date_zamena_ms") or 0)
+        if not dz or not (date_start_ms <= dz <= date_end_ms):
+            continue
+        buyer = r.get("buyer")
+        if not buyer:
+            continue
+        zamena_by_buyer[buyer] = zamena_by_buyer.get(buyer, 0) + 1
+        offset_h = 2 if dz >= APR_SPLIT else 1
+        from datetime import timezone, timedelta as td
+        dt_local = datetime.fromtimestamp(dz / 1000, tz=timezone.utc) + td(hours=offset_h)
+        date_str = dt_local.strftime("%Y-%m-%d")
+        if buyer not in zamena_daily_by_buyer:
+            zamena_daily_by_buyer[buyer] = {}
+        zamena_daily_by_buyer[buyer][date_str] = zamena_daily_by_buyer[buyer].get(date_str, 0) + 1
+
+    all_buyers = set(buyer_daily.keys()) | set(zamena_by_buyer.keys())
+    result = []
+    for buyer in sorted(all_buyers):
+        daily = buyer_daily.get(buyer, {})
+        merged_daily = daily
+        total_accounts = sum(merged_daily.values())   # всего выдано по date_vydachi
+        zamenas = zamena_by_buyer.get(buyer, 0)       # из них замены по date_zamena
+        paid = total_accounts - zamenas                # платные = total - замены
+        total = total_accounts
+        amount = paid * price_per_account
+        daily_list = sorted(
+            [{"date": d, "count": c} for d, c in merged_daily.items()],
+            key=lambda x: x["date"]
+        )
+        zamena_daily_dict = zamena_daily_by_buyer.get(buyer, {})
+        zamena_daily_list = sorted(
+            [{"date": d, "count": c} for d, c in zamena_daily_dict.items()],
+            key=lambda x: x["date"]
+        )
+        result.append({
+            "buyer": buyer,
+            "daily": daily_list,
+            "zamena_daily": zamena_daily_list,
+            "total_accounts": total_accounts,
+            "paid": paid,
+            "zamenas": zamenas,
+            "total": total,
+            "amount": amount,
+        })
+    result.sort(key=lambda x: x["total"], reverse=True)
+    return result
+
+def update_billing_html(billing_mar, billing_apr, html_content):
+    now = datetime.now().strftime("%d.%m.%Y %H:%M")
+    updated = html_content.replace("<!-- UPDATE_DATE -->", now)
+    updated = re.sub(r"const BILLING_MAR = \[.*?\];",
+                     "const BILLING_MAR = " + json.dumps(billing_mar, ensure_ascii=False) + ";",
+                     updated, flags=re.DOTALL)
+    updated = re.sub(r"const BILLING_APR = \[.*?\];",
+                     "const BILLING_APR = " + json.dumps(billing_apr, ensure_ascii=False) + ";",
+                     updated, flags=re.DOTALL)
+    return updated
+
 # ─── ОБНОВЛЕНИЕ HTML ─────────────────────────────────────────
-def update_html(data, buyers_data, html_content, buyers_mar=None, buyers_apr=None, reserve_totals=None):
+def update_html(data, buyers_data, html_content, buyers_mar=None, buyers_apr=None, reserve_totals=None,
+                doc_sellers=None, doc_sellers_mar=None, doc_sellers_apr=None):
     new_data_str = "const DATA = " + json.dumps(data, ensure_ascii=False) + ";"
     updated = re.sub(r"const DATA = \[.*?\];", new_data_str, html_content, flags=re.DOTALL)
     new_buyers_str = "const BUYERS_DATA = " + json.dumps(buyers_data, ensure_ascii=False) + ";"
@@ -500,6 +667,18 @@ def update_html(data, buyers_data, html_content, buyers_mar=None, buyers_apr=Non
     if reserve_totals is not None:
         new_rt_str = "const RESERVE_TOTALS = " + json.dumps(reserve_totals, ensure_ascii=False) + ";"
         updated = re.sub(r"const RESERVE_TOTALS = \{.*?\};", new_rt_str, updated, flags=re.DOTALL)
+    if doc_sellers is not None:
+        updated = re.sub(r"const DOC_SELLERS_DATA = \[.*?\];",
+                         "const DOC_SELLERS_DATA = " + json.dumps(doc_sellers, ensure_ascii=False) + ";",
+                         updated, flags=re.DOTALL)
+    if doc_sellers_mar is not None:
+        updated = re.sub(r"const DOC_SELLERS_DATA_MAR = \[.*?\];",
+                         "const DOC_SELLERS_DATA_MAR = " + json.dumps(doc_sellers_mar, ensure_ascii=False) + ";",
+                         updated, flags=re.DOTALL)
+    if doc_sellers_apr is not None:
+        updated = re.sub(r"const DOC_SELLERS_DATA_APR = \[.*?\];",
+                         "const DOC_SELLERS_DATA_APR = " + json.dumps(doc_sellers_apr, ensure_ascii=False) + ";",
+                         updated, flags=re.DOTALL)
     # Обновляем дату в заголовке
     now = datetime.now().strftime("%d.%m.%Y %H:%M")
     updated = re.sub(
@@ -577,29 +756,43 @@ def main():
     buyers_mar = compute_buyers_data(rows, date_end_ms=APRIL_1_MS - 1)
     buyers_apr = compute_buyers_data(rows, date_start_ms=APRIL_1_MS)
     print(f"Баеров найдено: {len(buyers_data)} (март: {len(buyers_mar)}, апрель: {len(buyers_apr)})")
+    doc_sellers = compute_doc_sellers_data(rows)
+    doc_sellers_mar = compute_doc_sellers_data(rows, date_end_ms=APRIL_1_MS - 1)
+    doc_sellers_apr = compute_doc_sellers_data(rows, date_start_ms=APRIL_1_MS)
+    print(f"Doc Sellers найдено: {len(doc_sellers)} (март: {len(doc_sellers_mar)}, апрель: {len(doc_sellers_apr)})")
 
-    # 4. Генерируем превью HTML локально
-    print("\nГенерирую превью HTML...")
-    template_path = "dashboard_v5_4.html"
-    with open(template_path, "r", encoding="utf-8") as f:
+    # 4. Считаем биллинг
+    print("\nСчитаю биллинг...")
+    DATE_START_MS = 1772319600000  # 1 марта 2026 00:00 UTC+1
+    billing_mar = compute_billing_data(rows, date_start_ms=DATE_START_MS, date_end_ms=APRIL_1_MS - 1)
+    billing_apr = compute_billing_data(rows, date_start_ms=APRIL_1_MS, date_end_ms=int(datetime.now().timestamp() * 1000))
+    print(f"Биллинг: март={len(billing_mar)} баеров, апрель={len(billing_apr)} баеров")
+
+    # 5. Генерируем дашборд HTML
+    print("\nГенерирую дашборд HTML...")
+    with open("dashboard_v5_4.html", "r", encoding="utf-8") as f:
         html_content = f.read()
-
-    updated_html = update_html(data, buyers_data, html_content, buyers_mar=buyers_mar, buyers_apr=buyers_apr, reserve_totals=reserve_totals)
-
-    # Сохраняем локально для превью
+    updated_html = update_html(data, buyers_data, html_content, buyers_mar=buyers_mar, buyers_apr=buyers_apr,
+                               reserve_totals=reserve_totals, doc_sellers=doc_sellers,
+                               doc_sellers_mar=doc_sellers_mar, doc_sellers_apr=doc_sellers_apr)
     with open("dashboard_preview.html", "w", encoding="utf-8") as f:
         f.write(updated_html)
-    print("Превью сохранено: dashboard_preview.html")
-    print("Открой этот файл в браузере чтобы проверить.")
-    print()
+    with open("dashboard.html", "w", encoding="utf-8") as f:
+        f.write(updated_html)
+    print("Сохранено: dashboard_preview.html, dashboard.html")
 
-    # Публикация на GitHub — раскомментируй когда готово:
-    # print("Публикую на GitHub...")
-    # _, sha = get_github_file()
-    # push_to_github(updated_html, sha)
-    # print(f"Ссылка: https://roseahmar.github.io/stats-ban/")
+    # 6. Генерируем биллинг HTML
+    print("Генерирую биллинг HTML...")
+    with open("billing_template.html", "r", encoding="utf-8") as f:
+        billing_tmpl = f.read()
+    billing_html = update_billing_html(billing_mar, billing_apr, billing_tmpl)
+    with open("billing_preview.html", "w", encoding="utf-8") as f:
+        f.write(billing_html)
+    with open("billing.html", "w", encoding="utf-8") as f:
+        f.write(billing_html)
+    print("Сохранено: billing_preview.html, billing.html")
 
-    print("Готово! (GitHub не обновлён — режим превью)")
+    print("\nГотово! (GitHub не обновлён — режим превью)")
 
 if __name__ == "__main__":
     main()

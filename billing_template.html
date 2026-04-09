@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Расчёт с баерами</title>
+<style>
+  :root {
+    --bg: #1a1917;
+    --card: #232220;
+    --card2: #2a2826;
+    --border: #333230;
+    --text: #e8e6e2;
+    --muted: #888780;
+    --accent: #d4944a;
+    --green: #4caf7d;
+    --red: #e05c5c;
+    --blue: #5c9ce0;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 14px; }
+
+  .top-bar {
+    padding: 16px 24px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .back-link {
+    color: var(--muted);
+    text-decoration: none;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    transition: color .15s, border-color .15s;
+  }
+  .back-link:hover { color: var(--text); border-color: var(--muted); }
+  .page-title { font-size: 20px; font-weight: 700; }
+  .page-subtitle { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+  .period-bar {
+    padding: 16px 24px;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    border-bottom: 1px solid var(--border);
+  }
+  .period-btn {
+    padding: 6px 16px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    font-size: 13px;
+    cursor: pointer;
+    transition: all .15s;
+  }
+  .period-btn:hover { color: var(--text); border-color: var(--muted); }
+  .period-btn.active { background: var(--card2); color: var(--text); border-color: #555; font-weight: 600; }
+
+  .main { padding: 20px 24px; max-width: 1200px; }
+
+  .summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+  .sum-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 18px;
+  }
+  .sum-label { font-size: 11px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
+  .sum-value { font-size: 28px; font-weight: 700; }
+  .sum-value.money { color: var(--green); }
+  .sum-sub { font-size: 12px; color: var(--muted); margin-top: 4px; }
+
+  .section-label {
+    font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase;
+    color: var(--muted); margin-bottom: 14px;
+  }
+
+  .buyers-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    gap: 16px;
+  }
+
+  .buyer-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  .buyer-header {
+    padding: 14px 16px 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    border-bottom: 1px solid var(--border);
+  }
+  .buyer-name { font-size: 15px; font-weight: 700; }
+  .buyer-amount { font-size: 18px; font-weight: 700; color: var(--green); }
+  .buyer-amount-label { font-size: 11px; color: var(--muted); text-align: right; margin-top: 1px; }
+
+  .buyer-body { padding: 12px 16px; }
+
+  .daily-scroll {
+    max-height: 200px;
+    overflow-y: auto;
+    margin-bottom: 10px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+  .daily-scroll::-webkit-scrollbar { width: 4px; }
+  .daily-scroll::-webkit-scrollbar-track { background: transparent; }
+  .daily-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+  .daily-table { width: 100%; border-collapse: collapse; }
+  .daily-table th {
+    font-size: 10px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase;
+    color: var(--muted); text-align: left; padding: 0 0 6px; border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; background: var(--card);
+  }
+  .daily-table th:last-child { text-align: right; }
+  .daily-table td { padding: 5px 0; font-size: 13px; border-bottom: 1px solid #2a2826; }
+  .daily-table td:last-child { text-align: right; font-weight: 600; }
+  .daily-table tr:last-child td { border-bottom: none; }
+  .date-cell { color: var(--muted); }
+  .count-cell { color: var(--text); }
+
+  .buyer-totals {
+    border-top: 1px solid var(--border);
+    padding-top: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .total-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+    color: var(--muted);
+  }
+  .total-row.final {
+    color: var(--text);
+    font-weight: 600;
+    font-size: 14px;
+    margin-top: 4px;
+    padding-top: 6px;
+    border-top: 1px solid var(--border);
+  }
+  .zamena-badge {
+    display: inline-block;
+    background: #3a2a18;
+    border: 1px solid #5a3e20;
+    color: var(--accent);
+    font-size: 11px;
+    padding: 1px 7px;
+    border-radius: 4px;
+    font-weight: 600;
+  }
+  .price-note {
+    font-size: 11px;
+    color: var(--muted);
+    text-align: right;
+    margin-top: 2px;
+  }
+
+  /* VIEW TABS */
+  .view-tabs {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 20px;
+  }
+  .view-tab {
+    padding: 6px 16px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    font-size: 13px;
+    cursor: pointer;
+    transition: all .15s;
+  }
+  .view-tab:hover { color: var(--text); border-color: var(--muted); }
+  .view-tab.active { background: var(--card2); color: var(--text); border-color: #555; font-weight: 600; }
+
+  /* DAILY VIEW */
+  .dates-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 20px;
+  }
+  .date-pill {
+    padding: 6px 14px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    background: var(--card);
+    color: var(--muted);
+    font-size: 13px;
+    cursor: pointer;
+    transition: all .15s;
+  }
+  .date-pill:hover { border-color: var(--accent); color: var(--text); }
+  .date-pill.active { border-color: var(--accent); background: #2a1e0e; color: var(--accent); font-weight: 600; }
+
+  .day-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  .day-table th {
+    font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase;
+    color: var(--muted); text-align: left; padding: 10px 16px;
+    border-bottom: 1px solid var(--border); background: var(--card2);
+  }
+  .day-table th:last-child, .day-table td:last-child { text-align: right; }
+  .day-table td { padding: 10px 16px; font-size: 14px; border-bottom: 1px solid #2a2826; }
+  .day-table tr:last-child td { border-bottom: none; }
+  .day-table tr:hover td { background: #2a2826; }
+  .day-total-row td { font-weight: 700; background: var(--card2); border-top: 1px solid var(--border); color: var(--text); }
+  .day-amount { color: var(--green); font-weight: 600; }
+</style>
+</head>
+<body>
+
+<div class="top-bar">
+  <a class="back-link" href="index.html">← Главное меню</a>
+  <div>
+    <div class="page-title">Расчёт с баерами</div>
+    <div class="page-subtitle">Обновлено: <!-- UPDATE_DATE --></div>
+  </div>
+</div>
+
+<div class="period-bar">
+  <button class="period-btn" id="btn-mar" onclick="setPeriod('mar')">Март 2026</button>
+  <button class="period-btn" id="btn-apr" onclick="setPeriod('apr')">Апрель 2026</button>
+</div>
+
+<div class="main">
+  <div class="summary-grid" id="summary"></div>
+  <div class="view-tabs">
+    <button class="view-tab active" id="tab-buyers" onclick="setView('buyers')">По баерам</button>
+    <button class="view-tab" id="tab-daily" onclick="setView('daily')">По дням</button>
+  </div>
+  <div id="view-buyers">
+    <div class="section-label">Карточки баеров</div>
+    <div class="buyers-grid" id="buyers"></div>
+  </div>
+  <div id="view-daily" style="display:none">
+    <div class="dates-list" id="dates-list"></div>
+    <div id="day-detail"></div>
+  </div>
+</div>
+
+<script>
+const BILLING_MAR = [];
+const BILLING_APR = [];
+const PRICE_PER_ACCOUNT = 16;
+
+const MONTHS_RU = {
+  '01':'января','02':'февраля','03':'марта','04':'апреля','05':'мая','06':'июня',
+  '07':'июля','08':'августа','09':'сентября','10':'октября','11':'ноября','12':'декабря'
+};
+
+function fmtDate(dateStr) {
+  // "2026-03-15" → "15 марта"
+  const [, , mm, dd] = dateStr.match(/(\d{4})-(\d{2})-(\d{2})/) || [];
+  if (!mm) return dateStr;
+  return `${parseInt(dd)} ${MONTHS_RU[mm] || mm}`;
+}
+
+function fmtMoney(n) {
+  return '$' + n.toLocaleString('en-US');
+}
+
+let activePeriod = 'mar';
+
+function setPeriod(p) {
+  activePeriod = p;
+  document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('btn-' + p).classList.add('active');
+  render();
+}
+
+function render() {
+  const data = activePeriod === 'mar' ? BILLING_MAR : BILLING_APR;
+
+  // Summary
+  const totalAcc = data.reduce((s, b) => s + b.total_accounts, 0);
+  const totalZam = data.reduce((s, b) => s + b.zamenas, 0);
+  const totalPaid = data.reduce((s, b) => s + b.paid, 0);
+  const totalAmt = data.reduce((s, b) => s + b.amount, 0);
+
+  document.getElementById('summary').innerHTML = `
+    <div class="sum-card">
+      <div class="sum-label">Аккаунтов выдано</div>
+      <div class="sum-value">${totalAcc.toLocaleString()}</div>
+      <div class="sum-sub">платных + замен</div>
+    </div>
+    <div class="sum-card">
+      <div class="sum-label">Замен получено</div>
+      <div class="sum-value">${totalZam.toLocaleString()}</div>
+      <div class="sum-sub">бесплатно</div>
+    </div>
+    <div class="sum-card">
+      <div class="sum-label">Итого к оплате</div>
+      <div class="sum-value">${totalPaid.toLocaleString()}</div>
+      <div class="sum-sub">платных × $${PRICE_PER_ACCOUNT}</div>
+    </div>
+    <div class="sum-card">
+      <div class="sum-label">Сумма</div>
+      <div class="sum-value money">${fmtMoney(totalAmt)}</div>
+      <div class="sum-sub">к получению</div>
+    </div>
+  `;
+
+  // Buyer cards
+  document.getElementById('buyers').innerHTML = data.map(b => {
+    const zamDailyMap = {};
+    (b.zamena_daily || []).forEach(z => { zamDailyMap[z.date] = z.count; });
+    const dailyRows = b.daily.map(d => {
+      const z = zamDailyMap[d.date] || 0;
+      const countCell = z > 0
+        ? `${d.count - z} акк. + <span style="color:var(--text)">${z} замен</span> <span style="color:var(--muted)">(${d.count})</span>`
+        : `${d.count} акк.`;
+      return `<tr>
+        <td class="date-cell">${fmtDate(d.date)}</td>
+        <td class="count-cell">${countCell}</td>
+      </tr>`;
+    }).join('');
+
+    const zamenaLine = b.zamenas > 0
+      ? `<div class="total-row">
+           <span>из них замены <span class="zamena-badge">${b.zamenas}</span> — бесплатно</span>
+           <span style="color:var(--green)">$0</span>
+         </div>`
+      : '';
+
+    return `
+      <div class="buyer-card">
+        <div class="buyer-header">
+          <div>
+            <div class="buyer-name">${b.buyer}</div>
+          </div>
+          <div style="text-align:right">
+            <div class="buyer-amount">${fmtMoney(b.amount)}</div>
+            <div class="buyer-amount-label">${b.paid} × $${PRICE_PER_ACCOUNT}</div>
+          </div>
+        </div>
+        <div class="buyer-body">
+          <div class="daily-scroll">
+            <table class="daily-table">
+              <thead>
+                <tr><th>Дата выдачи</th><th style="text-align:right">Аккаунты</th></tr>
+              </thead>
+              <tbody>${dailyRows}</tbody>
+            </table>
+          </div>
+          <div class="buyer-totals">
+            <div class="total-row">
+              <span>Всего выдано</span>
+              <span>${b.total_accounts} акк.</span>
+            </div>
+            ${zamenaLine}
+            <div class="total-row final">
+              <span>Итого к оплате</span>
+              <span><strong>${b.paid}</strong> × $${PRICE_PER_ACCOUNT} = <span style="color:var(--green)">${fmtMoney(b.amount)}</span></span>
+            </div>
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+let activeView = 'buyers';
+let activeDate = null;
+
+function setView(v) {
+  activeView = v;
+  document.querySelectorAll('.view-tab').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + v).classList.add('active');
+  document.getElementById('view-buyers').style.display = v === 'buyers' ? '' : 'none';
+  document.getElementById('view-daily').style.display = v === 'daily' ? '' : 'none';
+  if (v === 'daily') renderDaily();
+}
+
+function renderDaily() {
+  const data = activePeriod === 'mar' ? BILLING_MAR : BILLING_APR;
+
+  // Собираем все уникальные даты
+  const dateSet = new Set();
+  data.forEach(b => b.daily.forEach(d => dateSet.add(d.date)));
+  const dates = Array.from(dateSet).sort();
+
+  // Выбираем последнюю дату по умолчанию
+  if (!activeDate || !dates.includes(activeDate)) {
+    activeDate = dates[dates.length - 1] || null;
+  }
+
+  // Рисуем пилюли дат
+  document.getElementById('dates-list').innerHTML = dates.map(d =>
+    `<div class="date-pill ${d === activeDate ? 'active' : ''}" onclick="selectDate('${d}')">${fmtDate(d)}</div>`
+  ).join('');
+
+  renderDayDetail(data, activeDate);
+}
+
+function selectDate(date) {
+  activeDate = date;
+  renderDaily();
+}
+
+function renderDayDetail(data, date) {
+  if (!date) { document.getElementById('day-detail').innerHTML = ''; return; }
+
+  // Собираем строки: баер, кол-во, замены в этот день, платные, сумма
+  const rows = [];
+  data.forEach(b => {
+    const dayEntry = b.daily.find(d => d.date === date);
+    if (!dayEntry) return;
+    const total = dayEntry.count;
+    const zamEntry = (b.zamena_daily || []).find(z => z.date === date);
+    const zamenas = zamEntry ? zamEntry.count : 0;
+    const paid = total - zamenas;
+    rows.push({ buyer: b.buyer, total, zamenas, paid });
+  });
+
+  if (rows.length === 0) {
+    document.getElementById('day-detail').innerHTML = `<div style="color:var(--muted);padding:20px 0;">Нет данных за эту дату</div>`;
+    return;
+  }
+
+  rows.sort((a, b) => b.total - a.total);
+  const totalCount = rows.reduce((s, r) => s + r.total, 0);
+  const totalZamenas = rows.reduce((s, r) => s + r.zamenas, 0);
+  const totalPaid = rows.reduce((s, r) => s + r.paid, 0);
+
+  document.getElementById('day-detail').innerHTML = `
+    <table class="day-table">
+      <thead>
+        <tr>
+          <th>Баер</th>
+          <th style="text-align:right">Аккаунтов</th>
+          <th style="text-align:right">Сумма (×$${PRICE_PER_ACCOUNT})</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${rows.map(r => {
+          const countCell = r.zamenas > 0
+            ? `${r.paid} акк. + <span style="color:var(--text)">${r.zamenas} замен</span> <span style="color:var(--muted)">(${r.total})</span>`
+            : `${r.total}`;
+          return `<tr>
+            <td>${r.buyer}</td>
+            <td style="text-align:right;font-weight:600">${countCell}</td>
+            <td style="text-align:right" class="day-amount">${fmtMoney(r.paid * PRICE_PER_ACCOUNT)}</td>
+          </tr>`;
+        }).join('')}
+        <tr class="day-total-row">
+          <td>Итого за ${fmtDate(date)}</td>
+          <td style="text-align:right">${totalZamenas > 0 ? `${totalPaid} + <span style="color:var(--text)">${totalZamenas} замен</span> (${totalCount})` : totalCount}</td>
+          <td style="text-align:right" class="day-amount">${fmtMoney(totalPaid * PRICE_PER_ACCOUNT)}</td>
+        </tr>
+      </tbody>
+    </table>`;
+}
+
+setPeriod('apr');
+</script>
+</body>
+</html>

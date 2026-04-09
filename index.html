@@ -3,837 +3,121 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Дашборд — Закупки аккаунтов</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<title>Stats Dashboard</title>
 <style>
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #1a1917;
+    --card: #232220;
+    --card2: #2a2826;
+    --border: #333230;
+    --text: #e8e6e2;
+    --muted: #888780;
+    --accent: #d4944a;
+    --green: #4caf7d;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-    background: #f0efeb;
-    color: #1c1c1a;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     min-height: 100vh;
-    padding: 2rem;
-    font-size: 15px;
-    line-height: 1.5;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
   }
-  .dash { max-width: 1280px; margin: 0 auto; }
-  .page-header { margin-bottom: 2rem; padding-bottom: 1.25rem; border-bottom: 1px solid rgba(0,0,0,0.1); }
-  .page-title { font-size: 26px; font-weight: 600; letter-spacing: -0.5px; color: #1c1c1a; }
-  .page-sub { font-size: 14px; color: #888780; margin-top: 4px; }
 
-  .top-metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 2rem; }
-  .metric { background: #fff; border-radius: 14px; padding: 1.25rem 1.5rem; border: 1px solid rgba(0,0,0,0.07); }
-  .metric-label { font-size: 13px; color: #888780; font-weight: 500; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.04em; }
-  .metric-value { font-size: 32px; font-weight: 600; color: #1c1c1a; letter-spacing: -1px; }
-  .metric-hint { font-size: 12px; color: #bbb; margin-top: 4px; }
-
-  .controls {
-    display: flex; gap: 12px; margin-bottom: 1.5rem; flex-wrap: wrap; align-items: center;
-    background: #fff; padding: 0.875rem 1.25rem; border-radius: 12px; border: 1px solid rgba(0,0,0,0.07);
+  .logo {
+    font-size: 28px;
+    font-weight: 800;
+    margin-bottom: 6px;
+    letter-spacing: -.5px;
   }
-  .controls label { font-size: 14px; color: #888780; font-weight: 500; }
-  .controls select, .controls input {
-    font-size: 14px; font-family: 'Inter', sans-serif; padding: 6px 12px;
-    border: 1px solid rgba(0,0,0,0.15); border-radius: 8px; background: #f7f7f5;
-    color: #1c1c1a; cursor: pointer; outline: none;
-  }
-  .controls input { cursor: text; width: 80px; }
-  .controls select:focus, .controls input:focus { border-color: #888; }
-  .controls .sep { width: 1px; height: 24px; background: rgba(0,0,0,0.1); margin: 0 4px; }
-
-  .section-label { font-size: 13px; font-weight: 600; color: #888780; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 1rem; }
-
-  .cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; margin-bottom: 2.5rem; }
-  .card { background: #fff; border-radius: 16px; padding: 1.25rem 1.5rem; border: 1px solid rgba(0,0,0,0.07); transition: box-shadow 0.15s; }
-  .card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.08); }
-
-  .card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem; }
-  .card-id { font-size: 18px; font-weight: 600; letter-spacing: -0.3px; }
-  .card-gmail { font-size: 13px; color: #888780; margin-top: 3px; font-weight: 500; }
-  .card-badge { font-size: 13px; font-weight: 600; padding: 4px 10px; border-radius: 20px; }
-  .badge-green { background: #E3F3D5; color: #2d6010; }
-  .badge-amber { background: #FEF0D8; color: #7a4a08; }
-  .badge-red   { background: #FDEAEA; color: #8f2020; }
-
-  .farm-section { margin-bottom: 1rem; }
-  .farm-label-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
-  .farm-label { font-size: 12px; font-weight: 600; color: #aaa; text-transform: uppercase; letter-spacing: 0.05em; }
-  .farm-counts { font-size: 13px; color: #888780; }
-  .bar-bg { height: 6px; background: #ebebeb; border-radius: 99px; overflow: hidden; }
-  .bar-fill { height: 100%; border-radius: 99px; }
-
-  .divider { height: 1px; background: rgba(0,0,0,0.07); margin: 1rem 0; }
-
-  .doc-block { margin-bottom: 10px; }
-  .doc-block:last-child { margin-bottom: 0; }
-  .doc-name-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
-  .doc-name { font-size: 14px; font-weight: 600; color: #1c1c1a; }
-  .doc-valid-count { font-size: 12px; color: #aaa; }
-  .doc-bar-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
-  .doc-bar-bg { flex: 1; height: 5px; background: #ebebeb; border-radius: 99px; overflow: hidden; }
-  .doc-bar-fill { height: 100%; border-radius: 99px; }
-  .doc-ver-pct { font-size: 14px; font-weight: 600; min-width: 42px; text-align: right; }
-  .doc-counters { display: flex; gap: 6px; flex-wrap: wrap; }
-  .doc-counter { font-size: 12px; font-weight: 500; padding: 3px 10px; border-radius: 20px; }
-  .cnt-pass { background: #E3F3D5; color: #2d6010; }
-  .cnt-fail { background: #FDEAEA; color: #8f2020; }
-  .cnt-wait { background: #f0efeb; color: #888780; }
-  .doc-no-vna { font-size: 13px; color: #bbb; font-style: italic; }
-
-  .heatmap-section { background: #1c1c1a; border-radius: 16px; padding: 1.5rem; border: 1px solid rgba(255,255,255,0.06); margin-bottom: 1.5rem; overflow-x: auto; }
-  .heatmap-table { border-collapse: separate; border-spacing: 0; font-size: 14px; width: 100%; }
-  .heatmap-table th { padding: 8px 14px; color: #555552; font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; text-align: left; border-bottom: 2px solid #2a2a28; white-space: nowrap; }
-  .heatmap-table td { padding: 9px 14px; text-align: center; border-bottom: 1px solid #242422; white-space: nowrap; font-size: 14px; font-weight: 500; color: #aaa; }
-  .heatmap-table tr:last-child td { border-bottom: none; }
-  .heatmap-table .id-cell { text-align: left; color: #888784; font-weight: 600; font-size: 14px; }
-  .heatmap-table .gmail-cell { text-align: left; color: #666462; font-weight: 500; min-width: 110px; }
-  .heatmap-table .farm-cell { font-weight: 600; }
-
-  .legend { display: flex; gap: 16px; font-size: 13px; color: #555552; flex-wrap: wrap; align-items: center; margin-top: 1rem; }
-  .legend-item { display: flex; align-items: center; gap: 6px; }
-  .legend-box { width: 14px; height: 14px; border-radius: 4px; }
-
-  .empty-state { text-align: center; padding: 3rem; color: #bbb; font-size: 15px; }
-
-  .hm-cell { position: relative; cursor: default; }
-  .hm-cell .tooltip {
-    display: none;
-    position: absolute;
-    top: calc(100% + 6px);
-    left: 50%;
-    transform: translateX(-50%);
-    background: #1c1c1a;
-    color: #fff;
-    font-size: 12px;
-    font-weight: 400;
-    border-radius: 8px;
-    padding: 8px 12px;
-    white-space: nowrap;
-    z-index: 100;
-    min-width: 160px;
-    pointer-events: none;
-    line-height: 1.8;
-    text-align: left;
-    box-shadow: 0 4px 16px rgba(0,0,0,0.2);
-  }
-  .hm-cell .tooltip::before {
-    content: '';
-    position: absolute;
-    bottom: 100%;
-    left: 50%;
-    transform: translateX(-50%);
-    border: 5px solid transparent;
-    border-bottom-color: #1c1c1a;
-  }
-  .hm-cell:hover .tooltip { display: block; }
-
-  .card-comment { margin-top: 10px; border-top: 0.5px solid rgba(0,0,0,0.07); padding-top: 10px; }
-  .comment-label { font-size: 11px; font-weight: 600; color: #aaa; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 5px; }
-  .comment-input {
-    width: 100%; font-size: 13px; font-family: 'Inter', sans-serif;
-    border: 1px solid rgba(0,0,0,0.12); border-radius: 8px;
-    padding: 7px 10px; resize: vertical; min-height: 60px;
-    background: #f7f7f5; color: #1c1c1a; outline: none;
-    transition: border-color 0.15s;
-    line-height: 1.5;
-  }
-  .comment-input:focus { border-color: #888; background: #fff; }
-  .comment-input::placeholder { color: #bbb; }
-  .comment-saved { font-size: 11px; color: #3a7d15; margin-top: 4px; display: none; }
-
-  .loss-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 5px; }
-  .loss-tag { font-size: 11px; font-weight: 500; padding: 2px 8px; border-radius: 20px; background: #FDEAEA; color: #8f2020; }
-  .doc-block { margin-bottom: 14px; }
-  .doc-block:last-child { margin-bottom: 0; }
-  .doc-name-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
-  .doc-name { font-size: 14px; font-weight: 600; color: #1c1c1a; }
-  .stage-label { font-size: 11px; font-weight: 600; color: #aaa; text-transform: uppercase; letter-spacing: 0.05em; }
-  .stage-count { font-size: 11px; color: #aaa; }
-  .stack-bar { height: 6px; border-radius: 99px; overflow: hidden; display: flex; background: #ebebeb; margin-bottom: 6px; }
-  .stack-seg { height: 100%; }
-  .stack-tags { display: flex; flex-wrap: wrap; gap: 4px; }
-  .stag { font-size: 11px; font-weight: 500; padding: 2px 8px; border-radius: 20px; }
-  .stag-pass { background: #E3F3D5; color: #2d6010; }
-  .stag-fail { background: #FDEAEA; color: #8f2020; }
-  .stag-queue { background: #E6F1FB; color: #185FA5; }
-  .stag-other { background: #EEEDFE; color: #3C3489; }
-
-  .hm-popup {
-    display: none;
-    position: absolute;
-    background: #1c1c1a;
-    color: #e0e0e0;
-    border-radius: 10px;
-    padding: 10px 14px;
+  .logo span { color: var(--accent); }
+  .tagline {
     font-size: 13px;
-    min-width: 180px;
-    z-index: 200;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.4);
-    line-height: 1.8;
-    pointer-events: none;
+    color: var(--muted);
+    margin-bottom: 40px;
   }
-  .hm-popup.visible { display: block; }
-  .hm-popup-title { font-weight: 600; font-size: 12px; color: #888; margin-bottom: 4px; border-bottom: 0.5px solid #333; padding-bottom: 4px; }
-  .hm-popup-row { display: flex; justify-content: space-between; gap: 16px; }
-  .hm-popup-label { color: #888; }
-  .hm-popup-val { font-weight: 600; }
 
-  /* TABS */
-  .tabs { display: flex; gap: 4px; margin-bottom: 1.75rem; border-bottom: 2px solid rgba(0,0,0,0.08); }
-  .tab-btn { font-size: 14px; font-weight: 600; font-family: Inter, sans-serif; padding: 8px 20px; border: none; background: none; cursor: pointer; color: #888780; border-bottom: 2px solid transparent; margin-bottom: -2px; border-radius: 6px 6px 0 0; transition: color 0.15s, border-color 0.15s; }
-  .tab-btn:hover { color: #1c1c1a; }
-  .tab-btn.active { color: #1c1c1a; border-bottom-color: #1c1c1a; }
-  .tab-page { display: none; }
-  .tab-page.active { display: block; }
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 16px;
+    width: 100%;
+    max-width: 600px;
+  }
 
-  /* BUYERS */
-  .buyer-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 12px; }
-  .buyer-card { background: #fff; border-radius: 16px; padding: 1.25rem 1.5rem; border: 1px solid rgba(0,0,0,0.07); transition: box-shadow 0.15s; }
-  .buyer-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.08); }
-  .buyer-name { font-size: 18px; font-weight: 600; letter-spacing: -0.3px; margin-bottom: 4px; }
-  .buyer-total { font-size: 13px; color: #888780; margin-bottom: 1rem; }
-  .buyer-stack { height: 8px; border-radius: 99px; overflow: hidden; display: flex; background: #ebebeb; margin-bottom: 8px; }
-  .buyer-tags { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 1rem; }
-  .buyer-doc-row { display: flex; justify-content: space-between; align-items: center; font-size: 13px; padding: 5px 0; border-bottom: 1px solid rgba(0,0,0,0.05); }
-  .buyer-doc-row:last-child { border-bottom: none; }
-  .buyer-doc-name { font-weight: 600; color: #1c1c1a; }
-  .buyer-pct { font-size: 22px; font-weight: 600; letter-spacing: -0.5px; }
-  .buyer-metrics { display: flex; gap: 16px; margin-bottom: 1rem; }
-  .buyer-metric { flex: 1; }
-  .buyer-metric-label { font-size: 11px; color: #aaa; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 3px; }
-  .buyer-metric-val { font-size: 20px; font-weight: 600; }
-  .period-bar { display: flex; gap: 6px; margin-bottom: 1.5rem; }
-  .period-btn { font-size: 13px; font-weight: 600; font-family: 'Inter', sans-serif; padding: 7px 18px; border-radius: 99px; border: 1.5px solid rgba(0,0,0,0.12); background: transparent; color: #888780; cursor: pointer; transition: all 0.15s; letter-spacing: 0.01em; outline: none; }
-  .period-btn:hover { border-color: #555; color: #1c1c1a; }
-  .period-btn.active { background: #1c1c1a; color: #fff; border-color: #1c1c1a; }
+  .nav-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px 22px;
+    text-decoration: none;
+    color: var(--text);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    transition: border-color .15s, background .15s, transform .1s;
+    cursor: pointer;
+  }
+  .nav-card:hover {
+    border-color: var(--accent);
+    background: var(--card2);
+    transform: translateY(-2px);
+  }
+
+  .nav-icon {
+    font-size: 28px;
+    line-height: 1;
+  }
+  .nav-title {
+    font-size: 17px;
+    font-weight: 700;
+    margin-top: 4px;
+  }
+  .nav-desc {
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.5;
+  }
+  .nav-arrow {
+    font-size: 18px;
+    color: var(--accent);
+    margin-top: auto;
+    padding-top: 10px;
+  }
+
+  .footer {
+    margin-top: 40px;
+    font-size: 12px;
+    color: var(--muted);
+  }
 </style>
 </head>
 <body>
-<div class="dash">
 
-  <div class="page-header">
-    <div class="page-title">Закупки аккаунтов</div>
-    <div class="page-sub">Почты → фарм → аккаунты → верификация, обновлено 07.04.2026 13:37</div>
-  </div>
+<div class="logo">Stats<span>.</span></div>
+<div class="tagline">Аккаунты · Фарм · Баеры</div>
 
-  <div class="period-bar">
-    <button class="period-btn" onclick="setPeriod('all')">Всё время</button>
-    <button class="period-btn" onclick="setPeriod('mar')">Март 2026</button>
-    <button class="period-btn active" onclick="setPeriod('apr')">Апрель 2026</button>
-  </div>
+<div class="cards">
+  <a class="nav-card" href="dashboard.html">
+    <div class="nav-icon">📊</div>
+    <div class="nav-title">Закупки аккаунтов</div>
+    <div class="nav-desc">Статистика закупок, валидность фарма, верификация по баерам</div>
+    <div class="nav-arrow">→</div>
+  </a>
 
-  <div class="tabs">
-    <button class="tab-btn active" onclick="switchTab('purchases')">Закупки</button>
-    <button class="tab-btn" onclick="switchTab('buyers')">Баера</button>
-  </div>
-
-  <div class="tab-page active" id="tab-purchases">
-
-  <div class="top-metrics" id="top-metrics"></div>
-
-  <div class="controls">
-    <label>ID закупки:</label>
-    <input type="text" id="filter-id" placeholder="напр. 28" oninput="render()" />
-    <div class="sep"></div>
-    <label>Gmail Seller:</label>
-    <select id="filter-gmail" onchange="render()"><option value="">Все</option></select>
-    <div class="sep"></div>
-    <label>Doc Seller:</label>
-    <select id="filter-doc" onchange="render()"><option value="">Все</option></select>
-    <div class="sep"></div>
-    <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
-      <input type="checkbox" id="hide-empty" onchange="render()" style="cursor:pointer;">
-      Скрыть без аккаунтов
-    </label>
-    <div class="sep"></div>
-    <label>Сортировка:</label>
-    <select id="sort-by" onchange="render()">
-      <option value="id">По ID закупки</option>
-      <option value="valid_desc">Валидность почт ↓</option>
-      <option value="valid_asc">Валидность почт ↑</option>
-      <option value="ver_desc">Верификация ↓ (лучшие)</option>
-      <option value="ver_asc">Верификация ↑ (худшие)</option>
-    </select>
-  </div>
-
-  <div class="section-label">Карточки закупок</div>
-  <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:1rem;font-size:12px;color:#888780;">
-    <span style="font-weight:600;">Верификация:</span>
-    <span style="display:flex;align-items:center;gap:5px;"><span style="width:12px;height:12px;border-radius:3px;background:#3a7d15;display:inline-block;"></span>Прошли</span>
-    <span style="display:flex;align-items:center;gap:5px;"><span style="width:12px;height:12px;border-radius:3px;background:#c02020;display:inline-block;"></span>На замену</span>
-    <span style="display:flex;align-items:center;gap:5px;"><span style="width:12px;height:12px;border-radius:3px;background:#185FA5;display:inline-block;"></span>В очереди (Ready to work, Review и др.)</span>
-    <span style="display:flex;align-items:center;gap:5px;"><span style="width:12px;height:12px;border-radius:3px;background:#534AB7;display:inline-block;"></span>Прочие статусы</span>
-  </div>
-  <div class="cards-grid" id="cards"></div>
-
-  <div class="section-label">Тепловая карта — % успеха верификации</div>
-  <div class="heatmap-section">
-    <table class="heatmap-table" id="heatmap"></table>
-    <div class="legend">
-      <span style="font-weight:600;color:#555552;">Верификация:</span>
-      <span class="legend-item"><span class="legend-box" style="background:#1d2b1a;border:1px solid #3a5c30;"></span><span style="color:#6db85a;">80% и выше</span></span>
-      <span class="legend-item"><span class="legend-box" style="background:#2b2318;border:1px solid #5c4020;"></span><span style="color:#d4944a;">60–79%</span></span>
-      <span class="legend-item"><span class="legend-box" style="background:#2b1a1a;border:1px solid #5c2a2a;"></span><span style="color:#c05050;">ниже 60%</span></span>
-      <span class="legend-item"><span class="legend-box" style="background:#222220;border:1px solid #383836;"></span><span style="color:#555552;">нет данных</span></span>
-    </div>
-  </div>
-  </div><!-- /tab-purchases -->
-
-  <div class="tab-page" id="tab-buyers">
-    <div class="top-metrics" id="buyers-metrics"></div>
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:1.5rem;margin-bottom:1rem;">
-      <div class="section-label" style="margin:0;">Карточки баеров</div>
-      <div style="display:flex;align-items:center;gap:8px;">
-        <label style="font-size:13px;color:#888780;font-weight:500;">Баер:</label>
-        <select id="buyer-filter" onchange="renderBuyers()" style="font-size:13px;font-family:Inter,sans-serif;padding:5px 10px;border:1px solid rgba(0,0,0,0.15);border-radius:8px;background:#f7f7f5;color:#1c1c1a;cursor:pointer;outline:none;">
-          <option value="">Все</option>
-        </select>
-      </div>
-    </div>
-    <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:1rem;font-size:12px;color:#888780;">
-      <span style="font-weight:600;">Верификация:</span>
-      <span style="display:flex;align-items:center;gap:5px;"><span style="width:12px;height:12px;border-radius:3px;background:#3a7d15;display:inline-block;"></span>Прошли</span>
-      <span style="display:flex;align-items:center;gap:5px;"><span style="width:12px;height:12px;border-radius:3px;background:#c02020;display:inline-block;"></span>На замену</span>
-      <span style="display:flex;align-items:center;gap:5px;"><span style="width:12px;height:12px;border-radius:3px;background:#185FA5;display:inline-block;"></span>В очереди (Ready to work, Review и др.)</span>
-      <span style="display:flex;align-items:center;gap:5px;"><span style="width:12px;height:12px;border-radius:3px;background:#534AB7;display:inline-block;"></span>Прочие статусы</span>
-    </div>
-    <div class="buyer-cards" id="buyer-cards"></div>
-  </div><!-- /tab-buyers -->
-
+  <a class="nav-card" href="billing.html">
+    <div class="nav-icon">💰</div>
+    <div class="nav-title">Расчёт с баерами</div>
+    <div class="nav-desc">Выданные аккаунты по дням, замены, сумма к оплате по $16/акк.</div>
+    <div class="nav-arrow">→</div>
+  </a>
 </div>
 
-<script>
-const DATA = [{"id": "5", "gmail": "itsPVApro", "total": 97, "real_total": 97, "valid": 95, "invalid": 2, "passed_farm": 95, "not_checked": 0, "valid_pct": 97.9, "pustishka": 1, "after1": 1, "after_warm": 0, "reserve": 0, "reserve_mar": 0, "reserve_apr": 0, "docs": [{"doc": "1-k1", "total": 96, "valid": 95, "valid_pct": 99.0, "passed": 48, "failed": 9, "queued": 4, "queue_counts": {"Review": 3, "Business Verification": 1}, "others": {"BAN обход": 34}, "vna": 57, "not_yet": 38, "success_pct": 84.2, "bans": {"Бан по докам": {"n": 6, "pct": 66.7}, "Мультиакк": {"n": 1, "pct": 11.1}, "20 минутный таск": {"n": 1, "pct": 11.1}, "Без причины": {"n": 1, "pct": 11.1}}}], "date_created_ms": 1772623874167}, {"id": "6", "gmail": "buy_acc_srvs", "total": 49, "real_total": 49, "valid": 48, "invalid": 1, "passed_farm": 48, "not_checked": 0, "valid_pct": 98.0, "pustishka": 0, "after1": 1, "after_warm": 0, "reserve": 0, "reserve_mar": 0, "reserve_apr": 0, "docs": [{"doc": "1-k1", "total": 49, "valid": 48, "valid_pct": 98.0, "passed": 31, "failed": 7, "queued": 2, "queue_counts": {"Review": 2}, "others": {"BAN бизнес модели": 1, "BAN обход": 4, "REJECT clickbait": 3}, "vna": 38, "not_yet": 10, "success_pct": 81.6, "bans": {"Бан по докам": {"n": 4, "pct": 57.1}, "20 минутный таск": {"n": 1, "pct": 14.3}, "Без причины": {"n": 2, "pct": 28.6}}}], "date_created_ms": 1772802353196}, {"id": "7", "gmail": "itsPVApro", "total": 96, "real_total": 96, "valid": 96, "invalid": 0, "passed_farm": 96, "not_checked": 0, "valid_pct": 100.0, "pustishka": 0, "after1": 0, "after_warm": 0, "reserve": 0, "reserve_mar": 0, "reserve_apr": 0, "docs": [{"doc": "1-k1", "total": 2, "valid": 2, "valid_pct": 100.0, "passed": 1, "failed": 1, "queued": 0, "queue_counts": {}, "others": {}, "vna": 2, "not_yet": 0, "success_pct": 50.0, "bans": {"20 минутный таск": {"n": 1, "pct": 100.0}}}, {"doc": "Sidorovich", "total": 31, "valid": 31, "valid_pct": 100.0, "passed": 8, "failed": 5, "queued": 0, "queue_counts": {}, "others": {"BAN обход": 17, "BAN бизнес модели": 1}, "vna": 13, "not_yet": 18, "success_pct": 61.5, "bans": {"Без причины": {"n": 5, "pct": 100.0}}}, {"doc": "Viiking", "total": 63, "valid": 63, "valid_pct": 100.0, "passed": 24, "failed": 25, "queued": 0, "queue_counts": {}, "others": {"BAN бизнес модели": 3, "BAN other": 1, "BAN обход": 9}, "vna": 49, "not_yet": 14, "success_pct": 49.0, "bans": {"Бан по докам": {"n": 14, "pct": 56.0}, "20 минутный таск": {"n": 3, "pct": 12.0}, "Без причины": {"n": 8, "pct": 32.0}}}], "date_created_ms": 1773132954361}, {"id": "8", "gmail": "buy_acc_srvs", "total": 100, "real_total": 100, "valid": 88, "invalid": 12, "passed_farm": 88, "not_checked": 0, "valid_pct": 88.0, "pustishka": 1, "after1": 8, "after_warm": 3, "reserve": 0, "reserve_mar": 0, "reserve_apr": 0, "docs": [{"doc": "1-k1", "total": 11, "valid": 11, "valid_pct": 100.0, "passed": 6, "failed": 3, "queued": 0, "queue_counts": {}, "others": {"BAN обход": 2}, "vna": 9, "not_yet": 2, "success_pct": 66.7, "bans": {"Бан по докам": {"n": 1, "pct": 33.3}, "Мультиакк": {"n": 2, "pct": 66.7}}}, {"doc": "Sidorovich", "total": 43, "valid": 32, "valid_pct": 74.4, "passed": 12, "failed": 14, "queued": 1, "queue_counts": {"НА ВЕРИФ": 1}, "others": {"Пересоздать каб": 1, "BAN обход": 3, "BAN бизнес модели": 1}, "vna": 26, "not_yet": 6, "success_pct": 46.2, "bans": {"Бан по докам": {"n": 1, "pct": 7.1}, "Упал на номер": {"n": 1, "pct": 7.1}, "Мультиакк": {"n": 1, "pct": 7.1}, "Без причины": {"n": 11, "pct": 78.6}}}, {"doc": "Viiking", "total": 45, "valid": 45, "valid_pct": 100.0, "passed": 11, "failed": 12, "queued": 0, "queue_counts": {}, "others": {"BAN обход": 18, "BAN бизнес модели": 4}, "vna": 23, "not_yet": 22, "success_pct": 47.8, "bans": {"Бан по докам": {"n": 5, "pct": 41.7}, "20 минутный таск": {"n": 1, "pct": 8.3}, "Бан на ревью (ИЛИ сразу после)": {"n": 2, "pct": 16.7}, "Без причины": {"n": 4, "pct": 33.3}}}], "date_created_ms": 1773141947828}, {"id": "9", "gmail": "itsPVApro", "total": 183, "real_total": 183, "valid": 182, "invalid": 1, "passed_farm": 182, "not_checked": 0, "valid_pct": 99.5, "pustishka": 0, "after1": 1, "after_warm": 0, "reserve": 0, "reserve_mar": 0, "reserve_apr": 0, "docs": [{"doc": "1-k1", "total": 31, "valid": 30, "valid_pct": 96.8, "passed": 19, "failed": 3, "queued": 1, "queue_counts": {"Review": 1}, "others": {"вывод средств": 1, "Ban Publick ": 4, "BAN other": 1, "Пересоздать каб": 1}, "vna": 22, "not_yet": 8, "success_pct": 86.4, "bans": {"Бан по докам": {"n": 3, "pct": 100.0}}}, {"doc": "Sidorovich", "total": 65, "valid": 65, "valid_pct": 100.0, "passed": 29, "failed": 11, "queued": 1, "queue_counts": {"Review": 1}, "others": {"вывод средств": 9, "Ban с спендом": 1, "BAN обход": 7, "BAN бизнес модели": 6, "Пересоздать каб": 1}, "vna": 40, "not_yet": 25, "success_pct": 72.5, "bans": {"Бан по докам": {"n": 8, "pct": 72.7}, "Без причины": {"n": 3, "pct": 27.3}}}, {"doc": "Viiking", "total": 87, "valid": 87, "valid_pct": 100.0, "passed": 22, "failed": 28, "queued": 8, "queue_counts": {"НА ВЕРИФ": 1, "Review": 7}, "others": {"вывод средств": 17, "Ban Publick ": 8, "BAN обход": 2, "BAN бизнес модели": 2}, "vna": 50, "not_yet": 37, "success_pct": 44.0, "bans": {"Бан по докам": {"n": 16, "pct": 57.1}, "20 минутный таск": {"n": 3, "pct": 10.7}, "Без причины": {"n": 9, "pct": 32.1}}}], "date_created_ms": 1773220004890}, {"id": "11", "gmail": "buy_acc_srvs", "total": 48, "real_total": 48, "valid": 32, "invalid": 12, "passed_farm": 36, "not_checked": 0, "valid_pct": 75.0, "pustishka": 5, "after1": 6, "after_warm": 1, "reserve": 4, "reserve_mar": 4, "reserve_apr": 0, "docs": [{"doc": "1-k1", "total": 43, "valid": 32, "valid_pct": 74.4, "passed": 15, "failed": 2, "queued": 14, "queue_counts": {"READY TO WORK": 14}, "others": {"BAN other": 1}, "vna": 17, "not_yet": 15, "success_pct": 88.2, "bans": {"Бан по докам": {"n": 1, "pct": 50.0}, "Упал на номер": {"n": 1, "pct": 50.0}}}], "date_created_ms": 1773307006523}, {"id": "12", "gmail": "itsPVApro", "total": 193, "real_total": 193, "valid": 190, "invalid": 3, "passed_farm": 190, "not_checked": 0, "valid_pct": 98.4, "pustishka": 3, "after1": 0, "after_warm": 0, "reserve": 0, "reserve_mar": 0, "reserve_apr": 0, "docs": [{"doc": "1-k1", "total": 181, "valid": 181, "valid_pct": 100.0, "passed": 111, "failed": 3, "queued": 26, "queue_counts": {"Review": 10, "READY TO WORK": 10, "НА ВЕРИФ": 6}, "others": {"вывод средств": 3, "BAN бизнес модели": 5, "BAN обход": 32, "Пересоздать каб": 1}, "vna": 114, "not_yet": 67, "success_pct": 97.4, "bans": {"Бан по докам": {"n": 2, "pct": 66.7}, "20 минутный таск": {"n": 1, "pct": 33.3}}}, {"doc": "Viiking", "total": 9, "valid": 9, "valid_pct": 100.0, "passed": 4, "failed": 0, "queued": 4, "queue_counts": {"Review": 4}, "others": {"BAN обход": 1}, "vna": 4, "not_yet": 5, "success_pct": 100.0, "bans": {}}], "date_created_ms": 1773317884315}, {"id": "13", "gmail": "itsPVApro", "total": 240, "real_total": 240, "valid": 238, "invalid": 2, "passed_farm": 238, "not_checked": 0, "valid_pct": 99.2, "pustishka": 2, "after1": 0, "after_warm": 0, "reserve": 0, "reserve_mar": 0, "reserve_apr": 0, "docs": [{"doc": "1-k1", "total": 133, "valid": 133, "valid_pct": 100.0, "passed": 70, "failed": 11, "queued": 20, "queue_counts": {"Review": 14, "READY TO WORK": 5, "НА ВЕРИФ": 1}, "others": {"вывод средств": 14, "BAN бизнес модели": 4, "Ban Publick ": 3, "Пересоздать каб": 1, "BAN обход": 10}, "vna": 81, "not_yet": 52, "success_pct": 86.4, "bans": {"Бан по докам": {"n": 1, "pct": 9.1}, "20 минутный таск": {"n": 4, "pct": 36.4}, "Без причины": {"n": 6, "pct": 54.5}}}, {"doc": "3-lod", "total": 84, "valid": 84, "valid_pct": 100.0, "passed": 56, "failed": 4, "queued": 1, "queue_counts": {"Review": 1}, "others": {"BAN обход": 10, "вывод средств": 6, "BAN бизнес модели": 5, "Пересоздать каб": 1, "ON APPEAL бизнес вериф": 1}, "vna": 60, "not_yet": 24, "success_pct": 93.3, "bans": {"20 минутный таск": {"n": 3, "pct": 75.0}, "Без причины": {"n": 1, "pct": 25.0}}}, {"doc": "Fels", "total": 2, "valid": 2, "valid_pct": 100.0, "passed": 1, "failed": 0, "queued": 1, "queue_counts": {"READY TO WORK": 1}, "others": {}, "vna": 1, "not_yet": 1, "success_pct": 100.0, "bans": {}}, {"doc": "Sidorovich", "total": 2, "valid": 2, "valid_pct": 100.0, "passed": 2, "failed": 0, "queued": 0, "queue_counts": {}, "others": {}, "vna": 2, "not_yet": 0, "success_pct": 100.0, "bans": {}}, {"doc": "Viiking", "total": 5, "valid": 5, "valid_pct": 100.0, "passed": 4, "failed": 1, "queued": 0, "queue_counts": {}, "others": {}, "vna": 5, "not_yet": 0, "success_pct": 80.0, "bans": {"Без причины": {"n": 1, "pct": 100.0}}}], "date_created_ms": 1773401500584}, {"id": "14", "gmail": "itsPVApro", "total": 130, "real_total": 130, "valid": 130, "invalid": 0, "passed_farm": 130, "not_checked": 0, "valid_pct": 100.0, "pustishka": 0, "after1": 0, "after_warm": 0, "reserve": 0, "reserve_mar": 0, "reserve_apr": 0, "docs": [{"doc": "1-k1", "total": 103, "valid": 103, "valid_pct": 100.0, "passed": 57, "failed": 7, "queued": 3, "queue_counts": {"READY TO WORK": 1, "НА ВЕРИФ": 2}, "others": {"Ban с спендом": 4, "вывод средств": 23, "не выпуск AR": 3, "Ban Publick ": 1, "BAN other": 2, "BAN бизнес модели": 3}, "vna": 64, "not_yet": 39, "success_pct": 89.1, "bans": {"Бан по докам": {"n": 1, "pct": 14.3}, "Мультиакк": {"n": 2, "pct": 28.6}, "20 минутный таск": {"n": 4, "pct": 57.1}}}], "date_created_ms": 1773662762826}, {"id": "10", "gmail": "buy_acc_srvs", "total": 49, "real_total": 49, "valid": 26, "invalid": 23, "passed_farm": 26, "not_checked": 0, "valid_pct": 53.1, "pustishka": 23, "after1": 0, "after_warm": 0, "reserve": 0, "reserve_mar": 0, "reserve_apr": 0, "docs": [{"doc": "1-k1", "total": 26, "valid": 26, "valid_pct": 100.0, "passed": 23, "failed": 0, "queued": 2, "queue_counts": {"Business Verification": 2}, "others": {"вывод средств": 1}, "vna": 23, "not_yet": 3, "success_pct": 100.0, "bans": {}}], "date_created_ms": 1773757935939}, {"id": "15", "gmail": "buy_acc_srvs", "total": 71, "real_total": 71, "valid": 45, "invalid": 26, "passed_farm": 45, "not_checked": 0, "valid_pct": 63.4, "pustishka": 11, "after1": 15, "after_warm": 0, "reserve": 0, "reserve_mar": 0, "reserve_apr": 0, "docs": [{"doc": "1-k1", "total": 60, "valid": 45, "valid_pct": 75.0, "passed": 38, "failed": 2, "queued": 4, "queue_counts": {"Business Verification": 3, "READY TO WORK": 1}, "others": {"вывод средств": 1}, "vna": 40, "not_yet": 5, "success_pct": 95.0, "bans": {"Без причины": {"n": 2, "pct": 100.0}}}], "date_created_ms": 1773844519840}, {"id": "16", "gmail": "itsPVApro", "total": 28, "real_total": 28, "valid": 28, "invalid": 0, "passed_farm": 28, "not_checked": 0, "valid_pct": 100.0, "pustishka": 0, "after1": 0, "after_warm": 0, "reserve": 0, "reserve_mar": 0, "reserve_apr": 0, "docs": [{"doc": "1-k1", "total": 28, "valid": 28, "valid_pct": 100.0, "passed": 7, "failed": 1, "queued": 0, "queue_counts": {}, "others": {"вывод средств": 1, "BAN бизнес модели": 1, "Ban с спендом": 1, "BAN обход": 17}, "vna": 8, "not_yet": 20, "success_pct": 87.5, "bans": {"Бан по докам": {"n": 1, "pct": 100.0}}}], "date_created_ms": 1773870767563}, {"id": "19", "gmail": "haruu", "total": 50, "real_total": 50, "valid": 7, "invalid": 25, "passed_farm": 25, "not_checked": 0, "valid_pct": 50.0, "pustishka": 19, "after1": 6, "after_warm": 0, "reserve": 18, "reserve_mar": 18, "reserve_apr": 0, "docs": [{"doc": "1-k1", "total": 31, "valid": 7, "valid_pct": 22.6, "passed": 0, "failed": 0, "queued": 4, "queue_counts": {"Review": 4}, "others": {"ON APPEAL": 1, "Ban с спендом": 1, "не выпуск AR": 1}, "vna": 0, "not_yet": 7, "success_pct": 0, "bans": {}}], "date_created_ms": 1773936426726}, {"id": "18", "gmail": "itsPVApro", "total": 189, "real_total": 189, "valid": 58, "invalid": 130, "passed_farm": 59, "not_checked": 0, "valid_pct": 31.2, "pustishka": 127, "after1": 3, "after_warm": 0, "reserve": 1, "reserve_mar": 1, "reserve_apr": 0, "docs": [{"doc": "1-k1", "total": 47, "valid": 43, "valid_pct": 91.5, "passed": 12, "failed": 10, "queued": 9, "queue_counts": {"Review": 3, "НА ВЕРИФ": 5, "READY TO WORK": 1}, "others": {"BAN бизнес модели": 4, "Ban Publick ": 1, "вывод средств": 3, "1": 1, "diss": 1, "Ban с спендом": 2}, "vna": 22, "not_yet": 21, "success_pct": 54.5, "bans": {"Бан по докам": {"n": 1, "pct": 10.0}, "Мультиакк": {"n": 7, "pct": 70.0}, "20 минутный таск": {"n": 1, "pct": 10.0}, "Без причины": {"n": 1, "pct": 10.0}}}, {"doc": "Fels", "total": 15, "valid": 15, "valid_pct": 100.0, "passed": 7, "failed": 0, "queued": 2, "queue_counts": {"Review": 2}, "others": {"BAN бизнес модели": 4, "BAN other": 1, "ON APPEAL": 1}, "vna": 7, "not_yet": 8, "success_pct": 100.0, "bans": {}}], "date_created_ms": 1773950626529}, {"id": "20", "gmail": "buy_acc_srvs", "total": 75, "real_total": 75, "valid": 56, "invalid": 17, "passed_farm": 58, "not_checked": 0, "valid_pct": 77.3, "pustishka": 0, "after1": 17, "after_warm": 0, "reserve": 2, "reserve_mar": 2, "reserve_apr": 0, "docs": [{"doc": "1-k1", "total": 68, "valid": 51, "valid_pct": 75.0, "passed": 16, "failed": 5, "queued": 10, "queue_counts": {"Review": 6, "READY TO WORK": 2, "НА ВЕРИФ": 2}, "others": {"вывод средств": 2, "Ban с спендом": 1, "BAN бизнес модели": 2, "BAN обход": 14, "REJECT clickbait": 1}, "vna": 21, "not_yet": 30, "success_pct": 76.2, "bans": {"Упал на номер": {"n": 1, "pct": 20.0}, "Без причины": {"n": 4, "pct": 80.0}}}, {"doc": "Fels", "total": 7, "valid": 5, "valid_pct": 71.4, "passed": 1, "failed": 1, "queued": 0, "queue_counts": {}, "others": {"BAN обход": 2, "REJECT clickbait": 1}, "vna": 2, "not_yet": 3, "success_pct": 50.0, "bans": {"Без причины": {"n": 1, "pct": 100.0}}}], "date_created_ms": 1773952962574}, {"id": "21", "gmail": "buy_acc_srvs", "total": 48, "real_total": 48, "valid": 36, "invalid": 12, "passed_farm": 36, "not_checked": 0, "valid_pct": 75.0, "pustishka": 0, "after1": 12, "after_warm": 0, "reserve": 0, "reserve_mar": 0, "reserve_apr": 0, "docs": [{"doc": "1-k1", "total": 28, "valid": 21, "valid_pct": 75.0, "passed": 13, "failed": 0, "queued": 0, "queue_counts": {}, "others": {"вывод средств": 8}, "vna": 13, "not_yet": 8, "success_pct": 100.0, "bans": {}}, {"doc": "Fels", "total": 20, "valid": 15, "valid_pct": 75.0, "passed": 9, "failed": 1, "queued": 0, "queue_counts": {}, "others": {"ON APPEAL": 1, "Ban Publick ": 4}, "vna": 10, "not_yet": 5, "success_pct": 90.0, "bans": {"Без причины": {"n": 1, "pct": 100.0}}}], "date_created_ms": 1773953634102}, {"id": "22", "gmail": "itsPVApro", "total": 50, "real_total": 50, "valid": 42, "invalid": 0, "passed_farm": 50, "not_checked": 0, "valid_pct": 100.0, "pustishka": 0, "after1": 0, "after_warm": 0, "reserve": 8, "reserve_mar": 8, "reserve_apr": 0, "docs": [{"doc": "1-k1", "total": 16, "valid": 8, "valid_pct": 50.0, "passed": 1, "failed": 0, "queued": 2, "queue_counts": {"В процессе верификации": 1, "Review": 1}, "others": {"BAN бизнес модели": 1, "BAN обход": 3, "REJECT clickbait": 1}, "vna": 1, "not_yet": 7, "success_pct": 100.0, "bans": {}}, {"doc": "Fels", "total": 34, "valid": 34, "valid_pct": 100.0, "passed": 15, "failed": 1, "queued": 9, "queue_counts": {"НА ВЕРИФ": 1, "Review": 4, "READY TO WORK": 4}, "others": {"BAN обход": 7, "REJECT clickbait": 2}, "vna": 16, "not_yet": 18, "success_pct": 93.8, "bans": {"20 минутный таск": {"n": 1, "pct": 100.0}}}], "date_created_ms": 1774008820603}, {"id": "24", "gmail": "buy_acc_srvs", "total": 165, "real_total": 165, "valid": 99, "invalid": 66, "passed_farm": 99, "not_checked": 0, "valid_pct": 60.0, "pustishka": 31, "after1": 35, "after_warm": 0, "reserve": 0, "reserve_mar": 0, "reserve_apr": 0, "docs": [{"doc": "1-k1", "total": 119, "valid": 84, "valid_pct": 70.6, "passed": 44, "failed": 4, "queued": 9, "queue_counts": {"Review": 6, "READY TO WORK": 3}, "others": {"diss": 1, "WARMING": 1, "REJECT clickbait": 1, "вывод средств": 3, "BAN other": 1, "ON APPEAL": 1, "BAN обход": 15, "ЗАМЕНЕН": 1}, "vna": 48, "not_yet": 36, "success_pct": 91.7, "bans": {"Мультиакк": {"n": 1, "pct": 25.0}, "Без причины": {"n": 3, "pct": 75.0}}}, {"doc": "Sidorovich", "total": 15, "valid": 15, "valid_pct": 100.0, "passed": 14, "failed": 0, "queued": 0, "queue_counts": {}, "others": {"ON APPEAL": 1}, "vna": 14, "not_yet": 1, "success_pct": 100.0, "bans": {}}], "date_created_ms": 1774179607327}, {"id": "23", "gmail": "itsPVApro", "total": 12, "real_total": 12, "valid": 9, "invalid": 3, "passed_farm": 9, "not_checked": 0, "valid_pct": 75.0, "pustishka": 0, "after1": 3, "after_warm": 0, "reserve": 0, "reserve_mar": 0, "reserve_apr": 0, "docs": [{"doc": "1-k1", "total": 12, "valid": 9, "valid_pct": 75.0, "passed": 1, "failed": 0, "queued": 7, "queue_counts": {"Review": 7}, "others": {"BAN бизнес модели": 1}, "vna": 1, "not_yet": 8, "success_pct": 100.0, "bans": {}}], "date_created_ms": 1774181103904}, {"id": "25", "gmail": "DarkSt", "total": 130, "real_total": 130, "valid": 128, "invalid": 2, "passed_farm": 128, "not_checked": 0, "valid_pct": 98.5, "pustishka": 1, "after1": 1, "after_warm": 0, "reserve": 0, "reserve_mar": 0, "reserve_apr": 0, "docs": [{"doc": "1-k1", "total": 121, "valid": 120, "valid_pct": 99.2, "passed": 52, "failed": 5, "queued": 21, "queue_counts": {"НА ВЕРИФ": 3, "READY TO WORK": 6, "В процессе верификации": 4, "Review": 8}, "others": {"BAN бизнес модели": 4, "Ban Publick ": 1, "ON APPEAL": 3, "вывод средств": 1, "NEW_ADS": 1, "BAN обход": 29, "REJECT clickbait": 1, "REJECT other": 2}, "vna": 57, "not_yet": 63, "success_pct": 91.2, "bans": {"Бан по докам": {"n": 2, "pct": 40.0}, "Мультиакк": {"n": 1, "pct": 20.0}, "Без причины": {"n": 2, "pct": 40.0}}}, {"doc": "Sidorovich", "total": 8, "valid": 8, "valid_pct": 100.0, "passed": 6, "failed": 1, "queued": 0, "queue_counts": {}, "others": {"BAN обход": 1}, "vna": 7, "not_yet": 1, "success_pct": 85.7, "bans": {"Без причины": {"n": 1, "pct": 100.0}}}], "date_created_ms": 1774258051274}, {"id": "27", "gmail": "acmarket", "total": 94, "real_total": 94, "valid": 94, "invalid": 0, "passed_farm": 94, "not_checked": 0, "valid_pct": 100.0, "pustishka": 0, "after1": 0, "after_warm": 0, "reserve": 0, "reserve_mar": 0, "reserve_apr": 0, "docs": [{"doc": "1-k1", "total": 88, "valid": 88, "valid_pct": 100.0, "passed": 52, "failed": 0, "queued": 12, "queue_counts": {"Review": 10, "НА ВЕРИФ": 2}, "others": {"BAN бизнес модели": 5, "ON APPEAL": 5, "BAN обход": 13, "BAN other": 1}, "vna": 52, "not_yet": 36, "success_pct": 100.0, "bans": {}}, {"doc": "Sidorovich", "total": 6, "valid": 6, "valid_pct": 100.0, "passed": 3, "failed": 0, "queued": 0, "queue_counts": {}, "others": {"BAN обход": 3}, "vna": 3, "not_yet": 3, "success_pct": 100.0, "bans": {}}], "date_created_ms": 1774267162578}, {"id": "26", "gmail": "primeac", "total": 99, "real_total": 99, "valid": 47, "invalid": 52, "passed_farm": 47, "not_checked": 0, "valid_pct": 47.5, "pustishka": 52, "after1": 0, "after_warm": 0, "reserve": 0, "reserve_mar": 0, "reserve_apr": 0, "docs": [{"doc": "1-k1", "total": 47, "valid": 47, "valid_pct": 100.0, "passed": 39, "failed": 1, "queued": 4, "queue_counts": {"Review": 4}, "others": {"BAN бизнес модели": 3}, "vna": 40, "not_yet": 7, "success_pct": 97.5, "bans": {"Бан на ревью (ИЛИ сразу после)": {"n": 1, "pct": 100.0}}}], "date_created_ms": 1774272887072}, {"id": "28", "gmail": "DarkSt", "total": 97, "real_total": 97, "valid": 91, "invalid": 5, "passed_farm": 92, "not_checked": 0, "valid_pct": 94.8, "pustishka": 1, "after1": 4, "after_warm": 0, "reserve": 1, "reserve_mar": 1, "reserve_apr": 0, "docs": [{"doc": "1-k1", "total": 96, "valid": 91, "valid_pct": 94.8, "passed": 51, "failed": 1, "queued": 12, "queue_counts": {"READY TO WORK": 4, "Review": 8}, "others": {"BAN бизнес модели": 1, "вывод средств": 2, "ON APPEAL": 5, "BAN обход": 18, "REJECT clickbait": 1}, "vna": 52, "not_yet": 39, "success_pct": 98.1, "bans": {"Бан по докам": {"n": 1, "pct": 100.0}}}], "date_created_ms": 1774359077397}, {"id": "30", "gmail": "DarkSt", "total": 87, "real_total": 88, "valid": 83, "invalid": 4, "passed_farm": 83, "not_checked": 1, "valid_pct": 95.4, "pustishka": 0, "after1": 4, "after_warm": 0, "reserve": 0, "reserve_mar": 0, "reserve_apr": 0, "docs": [{"doc": "1-k1", "total": 87, "valid": 83, "valid_pct": 95.4, "passed": 40, "failed": 2, "queued": 30, "queue_counts": {"Review": 30}, "others": {"вывод средств": 3, "ON APPEAL": 2, "BAN обход": 3, "BAN бизнес модели": 3}, "vna": 42, "not_yet": 41, "success_pct": 95.2, "bans": {"Бан по докам": {"n": 1, "pct": 50.0}, "Без причины": {"n": 1, "pct": 50.0}}}], "date_created_ms": 1774439007686}, {"id": "31", "gmail": "z2u", "total": 43, "real_total": 43, "valid": 37, "invalid": 6, "passed_farm": 37, "not_checked": 0, "valid_pct": 86.0, "pustishka": 1, "after1": 5, "after_warm": 0, "reserve": 0, "reserve_mar": 0, "reserve_apr": 0, "docs": [{"doc": "1-k1", "total": 42, "valid": 37, "valid_pct": 88.1, "passed": 4, "failed": 19, "queued": 12, "queue_counts": {"Review": 11, "В процессе верификации": 1}, "others": {"вывод средств": 2}, "vna": 23, "not_yet": 14, "success_pct": 17.4, "bans": {"Бан по докам": {"n": 1, "pct": 5.3}, "Мультиакк": {"n": 18, "pct": 94.7}}}], "date_created_ms": 1774445978646}, {"id": "32", "gmail": "acmarket", "total": 50, "real_total": 50, "valid": 50, "invalid": 0, "passed_farm": 50, "not_checked": 0, "valid_pct": 100.0, "pustishka": 0, "after1": 0, "after_warm": 0, "reserve": 0, "reserve_mar": 0, "reserve_apr": 0, "docs": [{"doc": "1-k1", "total": 50, "valid": 50, "valid_pct": 100.0, "passed": 10, "failed": 0, "queued": 32, "queue_counts": {"Review": 29, "В процессе верификации": 3}, "others": {"BAN обход": 2, "REJECT clickbait": 5, "ON APPEAL": 1}, "vna": 10, "not_yet": 40, "success_pct": 100.0, "bans": {}}], "date_created_ms": 1774451000377}, {"id": "33", "gmail": "acmarket", "total": 48, "real_total": 48, "valid": 45, "invalid": 3, "passed_farm": 45, "not_checked": 0, "valid_pct": 93.8, "pustishka": 3, "after1": 0, "after_warm": 0, "reserve": 0, "reserve_mar": 0, "reserve_apr": 0, "docs": [{"doc": "1-k1", "total": 4, "valid": 4, "valid_pct": 100.0, "passed": 3, "failed": 0, "queued": 0, "queue_counts": {}, "others": {"BAN обход": 1}, "vna": 3, "not_yet": 1, "success_pct": 100.0, "bans": {}}, {"doc": "3-lod", "total": 41, "valid": 41, "valid_pct": 100.0, "passed": 12, "failed": 0, "queued": 16, "queue_counts": {"Review": 13, "НА ВЕРИФ": 2, "READY TO WORK": 1}, "others": {"WARMING": 3, "REJECT clickbait": 2, "BAN обход": 4, "вывод средств": 1, "ON APPEAL": 3}, "vna": 12, "not_yet": 29, "success_pct": 100.0, "bans": {}}], "date_created_ms": 1774451518756}, {"id": "34", "gmail": "primeac", "total": 46, "real_total": 46, "valid": 45, "invalid": 1, "passed_farm": 45, "not_checked": 0, "valid_pct": 97.8, "pustishka": 1, "after1": 0, "after_warm": 0, "reserve": 0, "reserve_mar": 0, "reserve_apr": 0, "docs": [{"doc": "1-k1", "total": 45, "valid": 45, "valid_pct": 100.0, "passed": 1, "failed": 0, "queued": 42, "queue_counts": {"Review": 33, "READY TO WORK": 8, "НА ВЕРИФ": 1}, "others": {"REJECT clickbait": 1, "BAN обход": 1}, "vna": 1, "not_yet": 44, "success_pct": 100.0, "bans": {}}], "date_created_ms": 1774528114108}, {"id": "35", "gmail": "DarkSt", "total": 94, "real_total": 94, "valid": 93, "invalid": 1, "passed_farm": 93, "not_checked": 0, "valid_pct": 98.9, "pustishka": 0, "after1": 1, "after_warm": 0, "reserve": 0, "reserve_mar": 0, "reserve_apr": 0, "docs": [{"doc": "1-k1", "total": 90, "valid": 89, "valid_pct": 98.9, "passed": 21, "failed": 0, "queued": 60, "queue_counts": {"Review": 47, "НА ВЕРИФ": 8, "READY TO WORK": 2, "В процессе верификации": 3}, "others": {"ON APPEAL": 1, "1": 3, "WARMING": 3, "BAN обход": 1}, "vna": 21, "not_yet": 68, "success_pct": 100.0, "bans": {}}, {"doc": "3-lod", "total": 4, "valid": 4, "valid_pct": 100.0, "passed": 1, "failed": 0, "queued": 3, "queue_counts": {"Review": 2, "В процессе верификации": 1}, "others": {}, "vna": 1, "not_yet": 3, "success_pct": 100.0, "bans": {}}], "date_created_ms": 1774529039339}, {"id": "36", "gmail": "DarkSt", "total": 98, "real_total": 98, "valid": 97, "invalid": 0, "passed_farm": 98, "not_checked": 0, "valid_pct": 100.0, "pustishka": 0, "after1": 0, "after_warm": 0, "reserve": 1, "reserve_mar": 1, "reserve_apr": 0, "docs": [{"doc": "1-k1", "total": 88, "valid": 87, "valid_pct": 98.9, "passed": 7, "failed": 0, "queued": 67, "queue_counts": {"Review": 62, "В процессе верификации": 1, "НА ВЕРИФ": 2, "READY TO WORK": 2}, "others": {"ON APPEAL": 1, "BAN бизнес модели": 6, "Ban с спендом": 1, "вывод средств": 2, "WARMING": 2, "BAN обход": 1}, "vna": 7, "not_yet": 80, "success_pct": 100.0, "bans": {}}, {"doc": "3-lod", "total": 9, "valid": 9, "valid_pct": 100.0, "passed": 2, "failed": 0, "queued": 4, "queue_counts": {"НА ВЕРИФ": 2, "Review": 2}, "others": {"WARMING": 1, "BAN обход": 2}, "vna": 2, "not_yet": 7, "success_pct": 100.0, "bans": {}}], "date_created_ms": 1774536995063}, {"id": "37", "gmail": "DarkSt", "total": 100, "real_total": 100, "valid": 99, "invalid": 1, "passed_farm": 99, "not_checked": 0, "valid_pct": 99.0, "pustishka": 0, "after1": 1, "after_warm": 0, "reserve": 0, "reserve_mar": 0, "reserve_apr": 0, "docs": [{"doc": "1-k1", "total": 100, "valid": 99, "valid_pct": 99.0, "passed": 7, "failed": 1, "queued": 82, "queue_counts": {"READY TO WORK": 39, "НА ВЕРИФ": 2, "Review": 41}, "others": {"WARMING": 8, "BAN бизнес модели": 1}, "vna": 8, "not_yet": 91, "success_pct": 87.5, "bans": {"Бан по докам": {"n": 1, "pct": 100.0}}}], "date_created_ms": 1774609560357}, {"id": "38", "gmail": "DarkSt", "total": 30, "real_total": 30, "valid": 30, "invalid": 0, "passed_farm": 30, "not_checked": 0, "valid_pct": 100.0, "pustishka": 0, "after1": 0, "after_warm": 0, "reserve": 0, "reserve_mar": 0, "reserve_apr": 0, "docs": [{"doc": "1-k1", "total": 30, "valid": 30, "valid_pct": 100.0, "passed": 1, "failed": 3, "queued": 26, "queue_counts": {"Review": 26}, "others": {}, "vna": 4, "not_yet": 26, "success_pct": 25.0, "bans": {"Мультиакк": {"n": 1, "pct": 33.3}, "Без причины": {"n": 2, "pct": 66.7}}}], "date_created_ms": 1774610639889}, {"id": "39", "gmail": "DarkSt", "total": 20, "real_total": 20, "valid": 20, "invalid": 0, "passed_farm": 20, "not_checked": 0, "valid_pct": 100.0, "pustishka": 0, "after1": 0, "after_warm": 0, "reserve": 0, "reserve_mar": 0, "reserve_apr": 0, "docs": [{"doc": "1-k1", "total": 20, "valid": 20, "valid_pct": 100.0, "passed": 0, "failed": 0, "queued": 13, "queue_counts": {"READY TO WORK": 7, "Review": 6}, "others": {"WARMING": 6, "BAN бизнес модели": 1}, "vna": 0, "not_yet": 20, "success_pct": 0, "bans": {}}], "date_created_ms": 1774610650029}, {"id": "40", "gmail": "primeac", "total": 100, "real_total": 100, "valid": 71, "invalid": 28, "passed_farm": 72, "not_checked": 0, "valid_pct": 72.0, "pustishka": 27, "after1": 1, "after_warm": 0, "reserve": 1, "reserve_mar": 1, "reserve_apr": 0, "docs": [{"doc": "1-k1", "total": 70, "valid": 69, "valid_pct": 98.6, "passed": 13, "failed": 1, "queued": 54, "queue_counts": {"READY TO WORK": 7, "Review": 47}, "others": {"ON APPEAL": 1}, "vna": 14, "not_yet": 55, "success_pct": 92.9, "bans": {"Упал на номер": {"n": 1, "pct": 100.0}}}], "date_created_ms": 1774615003350}, {"id": "42", "gmail": "primeac", "total": 100, "real_total": 100, "valid": 61, "invalid": 23, "passed_farm": 77, "not_checked": 0, "valid_pct": 77.0, "pustishka": 23, "after1": 0, "after_warm": 0, "reserve": 16, "reserve_mar": 16, "reserve_apr": 0, "docs": [{"doc": "1-k1", "total": 69, "valid": 57, "valid_pct": 82.6, "passed": 0, "failed": 1, "queued": 54, "queue_counts": {"Review": 26, "READY TO WORK": 22, "НА ВЕРИФ": 5, "В процессе верификации": 1}, "others": {"BAN обход": 1, "BAN бизнес модели": 1}, "vna": 1, "not_yet": 56, "success_pct": 0.0, "bans": {"Упал на номер": {"n": 1, "pct": 100.0}}}, {"doc": "3-lod", "total": 1, "valid": 0, "valid_pct": 0.0, "passed": 0, "failed": 0, "queued": 0, "queue_counts": {}, "others": {}, "vna": 0, "not_yet": 0, "success_pct": 0, "bans": {}}, {"doc": "6-artmak", "total": 7, "valid": 4, "valid_pct": 57.1, "passed": 0, "failed": 0, "queued": 4, "queue_counts": {"READY TO WORK": 2, "Review": 2}, "others": {}, "vna": 0, "not_yet": 4, "success_pct": 0, "bans": {}}], "date_created_ms": 1774630687367}, {"id": "43", "gmail": "smmacc", "total": 28, "real_total": 29, "valid": 18, "invalid": 9, "passed_farm": 19, "not_checked": 1, "valid_pct": 67.9, "pustishka": 0, "after1": 9, "after_warm": 0, "reserve": 1, "reserve_mar": 1, "reserve_apr": 0, "docs": [{"doc": "1-k1", "total": 28, "valid": 18, "valid_pct": 64.3, "passed": 5, "failed": 0, "queued": 13, "queue_counts": {"Review": 3, "READY TO WORK": 2, "В процессе верификации": 8}, "others": {}, "vna": 5, "not_yet": 13, "success_pct": 100.0, "bans": {}}], "date_created_ms": 1774872226361}, {"id": "44", "gmail": "smmseo", "total": 46, "real_total": 46, "valid": 21, "invalid": 24, "passed_farm": 22, "not_checked": 0, "valid_pct": 47.8, "pustishka": 0, "after1": 24, "after_warm": 0, "reserve": 1, "reserve_mar": 1, "reserve_apr": 0, "docs": [{"doc": "1-k1", "total": 43, "valid": 21, "valid_pct": 48.8, "passed": 3, "failed": 0, "queued": 14, "queue_counts": {"READY TO WORK": 9, "Review": 5}, "others": {"NEW_ADS": 1, "REJECT clickbait": 3}, "vna": 3, "not_yet": 18, "success_pct": 100.0, "bans": {}}, {"doc": "6-artmak", "total": 3, "valid": 0, "valid_pct": 0.0, "passed": 0, "failed": 0, "queued": 0, "queue_counts": {}, "others": {}, "vna": 0, "not_yet": 0, "success_pct": 0, "bans": {}}], "date_created_ms": 1774872243998}, {"id": "55", "gmail": "itshop", "total": 87, "real_total": 105, "valid": 38, "invalid": 9, "passed_farm": 78, "not_checked": 18, "valid_pct": 89.7, "pustishka": 3, "after1": 6, "after_warm": 0, "reserve": 40, "reserve_mar": 10, "reserve_apr": 30, "docs": [{"doc": "1-k1", "total": 84, "valid": 38, "valid_pct": 45.2, "passed": 1, "failed": 0, "queued": 27, "queue_counts": {"READY TO WORK": 17, "Review": 10}, "others": {"NEW_ADS": 7, "1": 3}, "vna": 1, "not_yet": 37, "success_pct": 100.0, "bans": {}}, {"doc": "Закинуть док", "total": 2, "valid": 0, "valid_pct": 0.0, "passed": 0, "failed": 0, "queued": 0, "queue_counts": {}, "others": {}, "vna": 0, "not_yet": 0, "success_pct": 0, "bans": {}}], "date_created_ms": 1774887437821}, {"id": "46", "gmail": "acmarket", "total": 34, "real_total": 34, "valid": 34, "invalid": 0, "passed_farm": 34, "not_checked": 0, "valid_pct": 100.0, "pustishka": 0, "after1": 0, "after_warm": 0, "reserve": 0, "reserve_mar": 0, "reserve_apr": 0, "docs": [{"doc": "1-k1", "total": 34, "valid": 34, "valid_pct": 100.0, "passed": 3, "failed": 0, "queued": 30, "queue_counts": {"READY TO WORK": 25, "Review": 4, "НА ВЕРИФ": 1}, "others": {"1": 1}, "vna": 3, "not_yet": 31, "success_pct": 100.0, "bans": {}}], "date_created_ms": 1774952494954}, {"id": "49", "gmail": "acmarket", "total": 100, "real_total": 100, "valid": 73, "invalid": 15, "passed_farm": 85, "not_checked": 0, "valid_pct": 85.0, "pustishka": 3, "after1": 12, "after_warm": 0, "reserve": 12, "reserve_mar": 12, "reserve_apr": 0, "docs": [{"doc": "1-k1", "total": 72, "valid": 53, "valid_pct": 73.6, "passed": 0, "failed": 0, "queued": 52, "queue_counts": {"Review": 20, "В процессе верификации": 1, "READY TO WORK": 31}, "others": {"NEW_ADS": 1}, "vna": 0, "not_yet": 53, "success_pct": 0, "bans": {}}, {"doc": "6-artmak", "total": 8, "valid": 3, "valid_pct": 37.5, "passed": 0, "failed": 0, "queued": 3, "queue_counts": {"READY TO WORK": 3}, "others": {}, "vna": 0, "not_yet": 3, "success_pct": 0, "bans": {}}], "date_created_ms": 1774962885616}, {"id": "48", "gmail": "itshop", "total": 68, "real_total": 68, "valid": 65, "invalid": 3, "passed_farm": 65, "not_checked": 0, "valid_pct": 95.6, "pustishka": 1, "after1": 2, "after_warm": 0, "reserve": 0, "reserve_mar": 0, "reserve_apr": 0, "docs": [{"doc": "1-k1", "total": 67, "valid": 65, "valid_pct": 97.0, "passed": 5, "failed": 0, "queued": 28, "queue_counts": {"READY TO WORK": 17, "Review": 8, "В процессе верификации": 3}, "others": {"NEW_ADS": 30, "Ban Publick ": 1, "ON APPEAL": 1}, "vna": 5, "not_yet": 60, "success_pct": 100.0, "bans": {}}], "date_created_ms": 1774987486941}, {"id": "47", "gmail": "itshop", "total": 32, "real_total": 32, "valid": 31, "invalid": 1, "passed_farm": 31, "not_checked": 0, "valid_pct": 96.9, "pustishka": 1, "after1": 0, "after_warm": 0, "reserve": 0, "reserve_mar": 0, "reserve_apr": 0, "docs": [{"doc": "1-k1", "total": 31, "valid": 31, "valid_pct": 100.0, "passed": 1, "failed": 0, "queued": 26, "queue_counts": {"READY TO WORK": 4, "Review": 22}, "others": {"NEW_ADS": 4}, "vna": 1, "not_yet": 30, "success_pct": 100.0, "bans": {}}], "date_created_ms": 1775034068853}, {"id": "57", "gmail": "primeac", "total": 100, "real_total": 100, "valid": 93, "invalid": 4, "passed_farm": 96, "not_checked": 0, "valid_pct": 96.0, "pustishka": 3, "after1": 1, "after_warm": 0, "reserve": 3, "reserve_mar": 0, "reserve_apr": 3, "docs": [{"doc": "1-k1", "total": 97, "valid": 93, "valid_pct": 95.9, "passed": 0, "failed": 0, "queued": 92, "queue_counts": {"READY TO WORK": 84, "Review": 8}, "others": {"NEW_ADS": 1}, "vna": 0, "not_yet": 93, "success_pct": 0, "bans": {}}], "date_created_ms": 1775058915587}, {"id": "56", "gmail": "primeac", "total": 50, "real_total": 50, "valid": 50, "invalid": 0, "passed_farm": 50, "not_checked": 0, "valid_pct": 100.0, "pustishka": 0, "after1": 0, "after_warm": 0, "reserve": 0, "reserve_mar": 0, "reserve_apr": 0, "docs": [{"doc": "1-k1", "total": 50, "valid": 50, "valid_pct": 100.0, "passed": 0, "failed": 0, "queued": 39, "queue_counts": {"Review": 19, "READY TO WORK": 20}, "others": {"NEW_ADS": 8, "BAN обход": 1, "REJECT clickbait": 2}, "vna": 0, "not_yet": 50, "success_pct": 0, "bans": {}}], "date_created_ms": 1775059473110}, {"id": "53", "gmail": "itshop", "total": 25, "real_total": 25, "valid": 24, "invalid": 1, "passed_farm": 24, "not_checked": 0, "valid_pct": 96.0, "pustishka": 0, "after1": 1, "after_warm": 0, "reserve": 0, "reserve_mar": 0, "reserve_apr": 0, "docs": [{"doc": "1-k1", "total": 25, "valid": 24, "valid_pct": 96.0, "passed": 0, "failed": 0, "queued": 17, "queue_counts": {"READY TO WORK": 17}, "others": {"NEW_ADS": 7}, "vna": 0, "not_yet": 24, "success_pct": 0, "bans": {}}], "date_created_ms": 1775065240047}, {"id": "54", "gmail": "itshop", "total": 50, "real_total": 50, "valid": 50, "invalid": 0, "passed_farm": 50, "not_checked": 0, "valid_pct": 100.0, "pustishka": 0, "after1": 0, "after_warm": 0, "reserve": 0, "reserve_mar": 0, "reserve_apr": 0, "docs": [{"doc": "1-k1", "total": 50, "valid": 50, "valid_pct": 100.0, "passed": 2, "failed": 0, "queued": 47, "queue_counts": {"Review": 12, "READY TO WORK": 33, "В процессе верификации": 2}, "others": {"BAN обход": 1}, "vna": 2, "not_yet": 48, "success_pct": 100.0, "bans": {}}], "date_created_ms": 1775076084195}, {"id": "58", "gmail": "DarkSt", "total": 85, "real_total": 100, "valid": 80, "invalid": 2, "passed_farm": 83, "not_checked": 15, "valid_pct": 97.6, "pustishka": 0, "after1": 2, "after_warm": 0, "reserve": 3, "reserve_mar": 0, "reserve_apr": 3, "docs": [{"doc": "1-k1", "total": 85, "valid": 80, "valid_pct": 94.1, "passed": 0, "failed": 0, "queued": 74, "queue_counts": {"Review": 12, "READY TO WORK": 62}, "others": {"NEW_ADS": 6}, "vna": 0, "not_yet": 80, "success_pct": 0, "bans": {}}], "date_created_ms": 1775135091501}, {"id": "59", "gmail": "itshop", "total": 2, "real_total": 2, "valid": 2, "invalid": 0, "passed_farm": 2, "not_checked": 0, "valid_pct": 100.0, "pustishka": 0, "after1": 0, "after_warm": 0, "reserve": 0, "reserve_mar": 0, "reserve_apr": 0, "docs": [{"doc": "1-k1", "total": 2, "valid": 2, "valid_pct": 100.0, "passed": 0, "failed": 0, "queued": 2, "queue_counts": {"READY TO WORK": 2}, "others": {}, "vna": 0, "not_yet": 2, "success_pct": 0, "bans": {}}], "date_created_ms": 1775194547988}, {"id": "60", "gmail": "itshop", "total": 47, "real_total": 47, "valid": 41, "invalid": 6, "passed_farm": 41, "not_checked": 0, "valid_pct": 87.2, "pustishka": 0, "after1": 6, "after_warm": 0, "reserve": 0, "reserve_mar": 0, "reserve_apr": 0, "docs": [{"doc": "1-k1", "total": 47, "valid": 41, "valid_pct": 87.2, "passed": 0, "failed": 0, "queued": 41, "queue_counts": {"READY TO WORK": 41}, "others": {}, "vna": 0, "not_yet": 41, "success_pct": 0, "bans": {}}], "date_created_ms": 1775195186620}, {"id": "61", "gmail": "DarkSt", "total": 100, "real_total": 100, "valid": 82, "invalid": 0, "passed_farm": 100, "not_checked": 0, "valid_pct": 100.0, "pustishka": 0, "after1": 0, "after_warm": 0, "reserve": 18, "reserve_mar": 0, "reserve_apr": 18, "docs": [{"doc": "1-k1", "total": 96, "valid": 79, "valid_pct": 82.3, "passed": 3, "failed": 0, "queued": 28, "queue_counts": {"READY TO WORK": 9, "Review": 19}, "others": {"NEW_ADS": 48}, "vna": 3, "not_yet": 76, "success_pct": 100.0, "bans": {}}], "date_created_ms": 1775209730959}, {"id": "62", "gmail": "DarkSt", "total": 45, "real_total": 50, "valid": 43, "invalid": 1, "passed_farm": 44, "not_checked": 5, "valid_pct": 97.8, "pustishka": 0, "after1": 1, "after_warm": 0, "reserve": 1, "reserve_mar": 0, "reserve_apr": 1, "docs": [{"doc": "1-k1", "total": 45, "valid": 43, "valid_pct": 95.6, "passed": 0, "failed": 0, "queued": 24, "queue_counts": {"READY TO WORK": 21, "Review": 3}, "others": {"NEW_ADS": 19}, "vna": 0, "not_yet": 43, "success_pct": 0, "bans": {}}], "date_created_ms": 1775214783543}, {"id": "63", "gmail": "DarkSt", "total": 50, "real_total": 50, "valid": 29, "invalid": 2, "passed_farm": 48, "not_checked": 0, "valid_pct": 96.0, "pustishka": 1, "after1": 1, "after_warm": 0, "reserve": 19, "reserve_mar": 0, "reserve_apr": 19, "docs": [{"doc": "1-k1", "total": 34, "valid": 29, "valid_pct": 85.3, "passed": 0, "failed": 0, "queued": 24, "queue_counts": {"READY TO WORK": 24}, "others": {"NEW_ADS": 5}, "vna": 0, "not_yet": 29, "success_pct": 0, "bans": {}}, {"doc": "3-lod", "total": 13, "valid": 0, "valid_pct": 0.0, "passed": 0, "failed": 0, "queued": 0, "queue_counts": {}, "others": {}, "vna": 0, "not_yet": 0, "success_pct": 0, "bans": {}}, {"doc": "Закинуть док", "total": 3, "valid": 0, "valid_pct": 0.0, "passed": 0, "failed": 0, "queued": 0, "queue_counts": {}, "others": {}, "vna": 0, "not_yet": 0, "success_pct": 0, "bans": {}}], "date_created_ms": 1775214800938}, {"id": "64", "gmail": "DarkSt", "total": 97, "real_total": 100, "valid": 23, "invalid": 0, "passed_farm": 97, "not_checked": 3, "valid_pct": 100.0, "pustishka": 0, "after1": 0, "after_warm": 0, "reserve": 74, "reserve_mar": 0, "reserve_apr": 74, "docs": [{"doc": "1-k1", "total": 25, "valid": 23, "valid_pct": 92.0, "passed": 0, "failed": 0, "queued": 13, "queue_counts": {"READY TO WORK": 11, "Review": 2}, "others": {"NEW_ADS": 10}, "vna": 0, "not_yet": 23, "success_pct": 0, "bans": {}}, {"doc": "3-lod", "total": 72, "valid": 0, "valid_pct": 0.0, "passed": 0, "failed": 0, "queued": 0, "queue_counts": {}, "others": {}, "vna": 0, "not_yet": 0, "success_pct": 0, "bans": {}}], "date_created_ms": 1775219280321}, {"id": "65", "gmail": "itshop", "total": 9, "real_total": 9, "valid": 5, "invalid": 0, "passed_farm": 9, "not_checked": 0, "valid_pct": 100.0, "pustishka": 0, "after1": 0, "after_warm": 0, "reserve": 4, "reserve_mar": 0, "reserve_apr": 4, "docs": [{"doc": "1-k1", "total": 9, "valid": 5, "valid_pct": 55.6, "passed": 0, "failed": 0, "queued": 5, "queue_counts": {"READY TO WORK": 5}, "others": {}, "vna": 0, "not_yet": 5, "success_pct": 0, "bans": {}}], "date_created_ms": 1775454560320}, {"id": "68", "gmail": "DarkSt", "total": 31, "real_total": 51, "valid": 0, "invalid": 0, "passed_farm": 31, "not_checked": 20, "valid_pct": 100.0, "pustishka": 0, "after1": 0, "after_warm": 0, "reserve": 31, "reserve_mar": 0, "reserve_apr": 31, "docs": [{"doc": "1-k1", "total": 1, "valid": 0, "valid_pct": 0.0, "passed": 0, "failed": 0, "queued": 0, "queue_counts": {}, "others": {}, "vna": 0, "not_yet": 0, "success_pct": 0, "bans": {}}, {"doc": "3-lod", "total": 30, "valid": 0, "valid_pct": 0.0, "passed": 0, "failed": 0, "queued": 0, "queue_counts": {}, "others": {}, "vna": 0, "not_yet": 0, "success_pct": 0, "bans": {}}], "date_created_ms": 1775454562714}, {"id": "66", "gmail": "itshop", "total": 87, "real_total": 100, "valid": 20, "invalid": 13, "passed_farm": 74, "not_checked": 13, "valid_pct": 85.1, "pustishka": 7, "after1": 6, "after_warm": 0, "reserve": 54, "reserve_mar": 0, "reserve_apr": 54, "docs": [{"doc": "1-k1", "total": 51, "valid": 20, "valid_pct": 39.2, "passed": 0, "failed": 0, "queued": 0, "queue_counts": {}, "others": {"NEW_ADS": 20}, "vna": 0, "not_yet": 20, "success_pct": 0, "bans": {}}, {"doc": "3-lod", "total": 32, "valid": 0, "valid_pct": 0.0, "passed": 0, "failed": 0, "queued": 0, "queue_counts": {}, "others": {}, "vna": 0, "not_yet": 0, "success_pct": 0, "bans": {}}], "date_created_ms": 1775455054744}, {"id": "67", "gmail": "DarkSt", "total": 100, "real_total": 100, "valid": 11, "invalid": 0, "passed_farm": 100, "not_checked": 0, "valid_pct": 100.0, "pustishka": 0, "after1": 0, "after_warm": 0, "reserve": 89, "reserve_mar": 0, "reserve_apr": 89, "docs": [{"doc": "1-k1", "total": 34, "valid": 6, "valid_pct": 17.6, "passed": 0, "failed": 0, "queued": 5, "queue_counts": {"READY TO WORK": 5}, "others": {"NEW_ADS": 1}, "vna": 0, "not_yet": 6, "success_pct": 0, "bans": {}}, {"doc": "3-lod", "total": 66, "valid": 5, "valid_pct": 7.6, "passed": 0, "failed": 0, "queued": 0, "queue_counts": {}, "others": {"NEW_ADS": 5}, "vna": 0, "not_yet": 5, "success_pct": 0, "bans": {}}], "date_created_ms": 1775475160693}, {"id": "69", "gmail": "DarkSt", "total": 13, "real_total": 100, "valid": 0, "invalid": 0, "passed_farm": 13, "not_checked": 87, "valid_pct": 100.0, "pustishka": 0, "after1": 0, "after_warm": 0, "reserve": 13, "reserve_mar": 0, "reserve_apr": 13, "docs": [{"doc": "3-lod", "total": 11, "valid": 0, "valid_pct": 0.0, "passed": 0, "failed": 0, "queued": 0, "queue_counts": {}, "others": {}, "vna": 0, "not_yet": 0, "success_pct": 0, "bans": {}}], "date_created_ms": 1775549819816}];
-const BUYERS_DATA = [{"buyer": "Rook MB", "total": 687, "passed": 280, "failed": 77, "zamena_count": 4, "queued": 270, "others": 60, "no_status": 0, "vna": 357, "success_pct": 78.4, "status_counts": {"READY TO WORK": 143, "Review": 127, "ACTIVE": 32, "WARMING": 16, "BAN бизнес модели": 35, "НА ЗАМЕНУ": 77, "End-3 Перевязать карту но оставить на этом же статусе": 25, "END-2. Средства выведены/Карта отвязана": 223, "REJECT инф": 6, "BAN: инф сайт => бан обход": 1, "BAN обход": 2}, "by_doc": [{"doc": "1-k1", "total": 458, "passed": 143, "failed": 11, "queued": 263, "others": 41, "vna": 154, "success_pct": 92.9, "bans": {"Без причины": 5, "Бан по докам": 5, "Мультиакк": 1}}, {"doc": "3-lod", "total": 53, "passed": 46, "failed": 2, "queued": 0, "others": 5, "vna": 48, "success_pct": 95.8, "bans": {"20 минутный таск": 1, "Без причины": 1}}, {"doc": "Fels", "total": 16, "passed": 12, "failed": 0, "queued": 0, "others": 4, "vna": 12, "success_pct": 100.0, "bans": {}}, {"doc": "Sidorovich", "total": 98, "passed": 50, "failed": 33, "queued": 7, "others": 8, "vna": 83, "success_pct": 60.2, "bans": {"Мультиакк": 13, "Бан по докам": 10, "Без причины": 10}}, {"doc": "Viiking", "total": 62, "passed": 29, "failed": 31, "queued": 0, "others": 2, "vna": 60, "success_pct": 48.3, "bans": {"Бан по докам": 7, "Без причины": 21, "Мультиакк": 3}}], "by_gmail": [{"gmail": "TN_GV", "total": 1, "passed": 1, "failed": 0, "vna": 1, "success_pct": 100.0}, {"gmail": "acmarket", "total": 44, "passed": 28, "failed": 0, "vna": 28, "success_pct": 100.0}, {"gmail": "primeac", "total": 82, "passed": 8, "failed": 0, "vna": 8, "success_pct": 100.0}, {"gmail": "itsPVApro", "total": 148, "passed": 115, "failed": 8, "vna": 123, "success_pct": 93.5}, {"gmail": "buy_acc_srvs", "total": 35, "passed": 26, "failed": 3, "vna": 29, "success_pct": 89.7}, {"gmail": "DarkSt", "total": 175, "passed": 16, "failed": 3, "vna": 19, "success_pct": 84.2}, {"gmail": "—", "total": 5, "passed": 4, "failed": 1, "vna": 5, "success_pct": 80.0}, {"gmail": "Gmail_boss", "total": 162, "passed": 82, "failed": 62, "vna": 144, "success_pct": 56.9}, {"gmail": "haruu", "total": 1, "passed": 0, "failed": 0, "vna": 0, "success_pct": 0}, {"gmail": "itshop", "total": 30, "passed": 0, "failed": 0, "vna": 0, "success_pct": 0}, {"gmail": "z2u", "total": 4, "passed": 0, "failed": 0, "vna": 0, "success_pct": 0}]}, {"buyer": "Avi MB", "total": 523, "passed": 280, "failed": 45, "zamena_count": 27, "queued": 137, "others": 61, "no_status": 0, "vna": 325, "success_pct": 86.2, "status_counts": {"READY TO WORK": 86, "Review": 43, "BAN обход": 26, "ACTIVE": 38, "В процессе верификации": 8, "REJECT clickbait": 16, "END-1. Перевязать карту перед удалением": 2, "END-2. Средства выведены/Карта отвязана": 219, "ON APPEAL": 11, "НА ЗАМЕНУ": 45, "End-3 Перевязать карту но оставить на этом же статусе": 21, "WARMING": 8}, "by_doc": [{"doc": "1-k1", "total": 311, "passed": 138, "failed": 1, "queued": 134, "others": 38, "vna": 139, "success_pct": 99.3, "bans": {"Без причины": 1}}, {"doc": "3-lod", "total": 12, "passed": 6, "failed": 0, "queued": 0, "others": 6, "vna": 6, "success_pct": 100.0, "bans": {}}, {"doc": "Fels", "total": 1, "passed": 1, "failed": 0, "queued": 0, "others": 0, "vna": 1, "success_pct": 100.0, "bans": {}}, {"doc": "Sidorovich", "total": 167, "passed": 116, "failed": 40, "queued": 1, "others": 10, "vna": 156, "success_pct": 74.4, "bans": {"Бан по докам": 14, "Мультиакк": 25, "Упал на номер": 1}}, {"doc": "Viiking", "total": 32, "passed": 19, "failed": 4, "queued": 2, "others": 7, "vna": 23, "success_pct": 82.6, "bans": {"Бан по докам": 1, "Мультиакк": 1, "Без причины": 2}}], "by_gmail": [{"gmail": "acmarket", "total": 75, "passed": 24, "failed": 0, "vna": 24, "success_pct": 100.0}, {"gmail": "buy_acc_srvs", "total": 49, "passed": 48, "failed": 0, "vna": 48, "success_pct": 100.0}, {"gmail": "itsPVApro", "total": 39, "passed": 39, "failed": 0, "vna": 39, "success_pct": 100.0}, {"gmail": "itshop", "total": 60, "passed": 1, "failed": 0, "vna": 1, "success_pct": 100.0}, {"gmail": "—", "total": 1, "passed": 1, "failed": 0, "vna": 1, "success_pct": 100.0}, {"gmail": "DarkSt", "total": 109, "passed": 49, "failed": 1, "vna": 50, "success_pct": 98.0}, {"gmail": "Gmail_boss", "total": 184, "passed": 118, "failed": 44, "vna": 162, "success_pct": 72.8}, {"gmail": "primeac", "total": 6, "passed": 0, "failed": 0, "vna": 0, "success_pct": 0}]}, {"buyer": "Gadi MB", "total": 497, "passed": 64, "failed": 25, "zamena_count": 6, "queued": 165, "others": 243, "no_status": 0, "vna": 89, "success_pct": 71.9, "status_counts": {"READY TO WORK": 139, "НА ВЕРИФ": 9, "Review": 17, "НА ЗАМЕНУ": 25, "WARMING": 8, "BAN бизнес модели": 2, "BAN обход": 232, "END-2. Средства выведены/Карта отвязана": 64, "ЗАМЕНЕН": 1}, "by_doc": [{"doc": "1-k1", "total": 366, "passed": 44, "failed": 9, "queued": 146, "others": 167, "vna": 53, "success_pct": 83.0, "bans": {"Мультиакк": 2, "Бан по докам": 6, "Без причины": 1}}, {"doc": "3-lod", "total": 28, "passed": 3, "failed": 0, "queued": 10, "others": 15, "vna": 3, "success_pct": 100.0, "bans": {}}, {"doc": "6-artmak", "total": 3, "passed": 0, "failed": 0, "queued": 3, "others": 0, "vna": 0, "success_pct": 0, "bans": {}}, {"doc": "Fels", "total": 4, "passed": 0, "failed": 0, "queued": 4, "others": 0, "vna": 0, "success_pct": 0, "bans": {}}, {"doc": "Sidorovich", "total": 37, "passed": 9, "failed": 6, "queued": 1, "others": 21, "vna": 15, "success_pct": 60.0, "bans": {"Мультиакк": 4, "Бан по докам": 2}}, {"doc": "Viiking", "total": 52, "passed": 8, "failed": 10, "queued": 1, "others": 33, "vna": 18, "success_pct": 44.4, "bans": {"Бан по докам": 7, "20 минутный таск": 1, "Мультиакк": 2}}, {"doc": "—", "total": 7, "passed": 0, "failed": 0, "queued": 0, "others": 7, "vna": 0, "success_pct": 0, "bans": {}}], "by_gmail": [{"gmail": "acmarket", "total": 59, "passed": 3, "failed": 0, "vna": 3, "success_pct": 100.0}, {"gmail": "itsPVApro", "total": 156, "passed": 32, "failed": 2, "vna": 34, "success_pct": 94.1}, {"gmail": "buy_acc_srvs", "total": 56, "passed": 8, "failed": 6, "vna": 14, "success_pct": 57.1}, {"gmail": "Gmail_boss", "total": 67, "passed": 17, "failed": 13, "vna": 30, "success_pct": 56.7}, {"gmail": "DarkSt", "total": 117, "passed": 3, "failed": 3, "vna": 6, "success_pct": 50.0}, {"gmail": "—", "total": 5, "passed": 1, "failed": 1, "vna": 2, "success_pct": 50.0}, {"gmail": "itshop", "total": 19, "passed": 0, "failed": 0, "vna": 0, "success_pct": 0}, {"gmail": "primeac", "total": 18, "passed": 0, "failed": 0, "vna": 0, "success_pct": 0}]}, {"buyer": "BadBunny", "total": 438, "passed": 163, "failed": 71, "zamena_count": 46, "queued": 65, "others": 139, "no_status": 0, "vna": 234, "success_pct": 69.7, "status_counts": {"NEW_ADS": 117, "Review": 57, "READY TO WORK": 8, "ON APPEAL": 6, "вывод средств": 12, "END-2. Средства выведены/Карта отвязана": 138, "END-1. Перевязать карту перед удалением": 11, "НА ЗАМЕНУ": 71, "ACTIVE": 12, "BAN other": 1, "APPEAL SUCCESSFUL  ПП/Unpaid/БизВериф": 2, "1": 2, "ЗАМЕНЕН": 1}, "by_doc": [{"doc": "1-k1", "total": 238, "passed": 49, "failed": 14, "queued": 48, "others": 127, "vna": 63, "success_pct": 77.8, "bans": {"Мультиакк": 13, "Бан по докам": 1}}, {"doc": "3-lod", "total": 10, "passed": 1, "failed": 0, "queued": 2, "others": 7, "vna": 1, "success_pct": 100.0, "bans": {}}, {"doc": "Doc", "total": 7, "passed": 6, "failed": 0, "queued": 1, "others": 0, "vna": 6, "success_pct": 100.0, "bans": {}}, {"doc": "Fels", "total": 5, "passed": 3, "failed": 2, "queued": 0, "others": 0, "vna": 5, "success_pct": 60.0, "bans": {"Мультиакк": 2}}, {"doc": "Sidorovich", "total": 63, "passed": 42, "failed": 16, "queued": 3, "others": 2, "vna": 58, "success_pct": 72.4, "bans": {"Мультиакк": 9, "Бан по докам": 6, "20 минутный таск": 1}}, {"doc": "Viiking", "total": 80, "passed": 41, "failed": 27, "queued": 11, "others": 1, "vna": 68, "success_pct": 60.3, "bans": {"Мультиакк": 18, "Бан по докам": 8, "20 минутный таск": 1}}, {"doc": "—", "total": 35, "passed": 21, "failed": 12, "queued": 0, "others": 2, "vna": 33, "success_pct": 63.6, "bans": {"Бан по докам": 8, "Мультиакк": 2, "20 минутный таск": 1, "Упал на номер": 1}}], "by_gmail": [{"gmail": "DarkSt", "total": 122, "passed": 19, "failed": 0, "vna": 19, "success_pct": 100.0}, {"gmail": "TN_GV", "total": 6, "passed": 4, "failed": 0, "vna": 4, "success_pct": 100.0}, {"gmail": "acmarket", "total": 20, "passed": 7, "failed": 0, "vna": 7, "success_pct": 100.0}, {"gmail": "buy_acc_srvs", "total": 25, "passed": 21, "failed": 0, "vna": 21, "success_pct": 100.0}, {"gmail": "itsPVApro", "total": 18, "passed": 8, "failed": 0, "vna": 8, "success_pct": 100.0}, {"gmail": "Gmail_boss", "total": 174, "passed": 104, "failed": 58, "vna": 162, "success_pct": 64.2}, {"gmail": "itshop", "total": 37, "passed": 0, "failed": 0, "vna": 0, "success_pct": 0}, {"gmail": "primeac", "total": 12, "passed": 0, "failed": 0, "vna": 0, "success_pct": 0}, {"gmail": "smmacc", "total": 2, "passed": 0, "failed": 0, "vna": 0, "success_pct": 0}, {"gmail": "smmseo", "total": 4, "passed": 0, "failed": 0, "vna": 0, "success_pct": 0}, {"gmail": "z2u", "total": 18, "passed": 0, "failed": 13, "vna": 13, "success_pct": 0.0}]}, {"buyer": "Gogi MB", "total": 436, "passed": 151, "failed": 63, "zamena_count": 4, "queued": 105, "others": 117, "no_status": 0, "vna": 214, "success_pct": 70.6, "status_counts": {"NEW_ADS": 60, "В процессе верификации": 23, "Ban Publick ": 13, "APPEAL SUCCESSFUL  ПП/Unpaid/БизВериф": 19, "Review": 81, "ON APPEAL": 9, "ACTIVE": 24, "END-2. Средства выведены/Карта отвязана": 91, "НА ЗАМЕНУ": 63, "вывод средств": 34, "END-1. Перевязать карту перед удалением": 17, "BAN other": 1, "НА ВЕРИФ": 1}, "by_doc": [{"doc": "1-k1", "total": 224, "passed": 73, "failed": 15, "queued": 38, "others": 98, "vna": 88, "success_pct": 83.0, "bans": {"Мультиакк": 6, "Бан по докам": 2, "Без причины": 4, "20 минутный таск": 3}}, {"doc": "3-lod", "total": 13, "passed": 3, "failed": 0, "queued": 8, "others": 2, "vna": 3, "success_pct": 100.0, "bans": {}}, {"doc": "Fels", "total": 10, "passed": 4, "failed": 1, "queued": 0, "others": 5, "vna": 5, "success_pct": 80.0, "bans": {"Без причины": 1}}, {"doc": "Sidorovich", "total": 90, "passed": 36, "failed": 18, "queued": 29, "others": 7, "vna": 54, "success_pct": 66.7, "bans": {"20 минутный таск": 5, "Бан по докам": 6, "Мультиакк": 7}}, {"doc": "Viiking", "total": 98, "passed": 35, "failed": 29, "queued": 30, "others": 4, "vna": 64, "success_pct": 54.7, "bans": {"Бан по докам": 18, "20 минутный таск": 2, "Мультиакк": 9}}, {"doc": "—", "total": 1, "passed": 0, "failed": 0, "queued": 0, "others": 1, "vna": 0, "success_pct": 0, "bans": {}}], "by_gmail": [{"gmail": "TN_GV", "total": 35, "passed": 12, "failed": 0, "vna": 12, "success_pct": 100.0}, {"gmail": "acmarket", "total": 13, "passed": 2, "failed": 0, "vna": 2, "success_pct": 100.0}, {"gmail": "itshop", "total": 50, "passed": 4, "failed": 0, "vna": 4, "success_pct": 100.0}, {"gmail": "smmacc", "total": 15, "passed": 5, "failed": 0, "vna": 5, "success_pct": 100.0}, {"gmail": "buy_acc_srvs", "total": 60, "passed": 38, "failed": 7, "vna": 45, "success_pct": 84.4}, {"gmail": "DarkSt", "total": 62, "passed": 14, "failed": 4, "vna": 18, "success_pct": 77.8}, {"gmail": "itsPVApro", "total": 93, "passed": 41, "failed": 22, "vna": 63, "success_pct": 65.1}, {"gmail": "Gmail_boss", "total": 103, "passed": 35, "failed": 30, "vna": 65, "success_pct": 53.8}, {"gmail": "primeac", "total": 5, "passed": 0, "failed": 0, "vna": 0, "success_pct": 0}]}, {"buyer": "Shadow MB", "total": 415, "passed": 235, "failed": 13, "zamena_count": 2, "queued": 167, "others": 0, "no_status": 0, "vna": 248, "success_pct": 94.8, "status_counts": {"READY TO WORK": 60, "Review": 99, "END-1. Перевязать карту перед удалением": 141, "ACTIVE": 46, "В процессе верификации": 4, "НА ЗАМЕНУ": 13, "END-2. Средства выведены/Карта отвязана": 48, "НА ВЕРИФ": 4}, "by_doc": [{"doc": "1-k1", "total": 290, "passed": 141, "failed": 8, "queued": 141, "others": 0, "vna": 149, "success_pct": 94.6, "bans": {"Без причины": 7, "Бан по докам": 1}}, {"doc": "3-lod", "total": 9, "passed": 7, "failed": 0, "queued": 2, "others": 0, "vna": 7, "success_pct": 100.0, "bans": {}}, {"doc": "Fels", "total": 4, "passed": 3, "failed": 0, "queued": 1, "others": 0, "vna": 3, "success_pct": 100.0, "bans": {}}, {"doc": "Sidorovich", "total": 33, "passed": 29, "failed": 1, "queued": 3, "others": 0, "vna": 30, "success_pct": 96.7, "bans": {"Мультиакк": 1}}, {"doc": "Viiking", "total": 50, "passed": 42, "failed": 4, "queued": 4, "others": 0, "vna": 46, "success_pct": 91.3, "bans": {"Без причины": 2, "Мультиакк": 2}}, {"doc": "—", "total": 29, "passed": 13, "failed": 0, "queued": 16, "others": 0, "vna": 13, "success_pct": 100.0, "bans": {}}], "by_gmail": [{"gmail": "DarkSt", "total": 74, "passed": 50, "failed": 0, "vna": 50, "success_pct": 100.0}, {"gmail": "acmarket", "total": 47, "passed": 15, "failed": 0, "vna": 15, "success_pct": 100.0}, {"gmail": "itshop", "total": 11, "passed": 2, "failed": 0, "vna": 2, "success_pct": 100.0}, {"gmail": "primeac", "total": 108, "passed": 33, "failed": 0, "vna": 33, "success_pct": 100.0}, {"gmail": "—", "total": 15, "passed": 11, "failed": 0, "vna": 11, "success_pct": 100.0}, {"gmail": "TN_GV", "total": 29, "passed": 28, "failed": 1, "vna": 29, "success_pct": 96.6}, {"gmail": "Gmail_boss", "total": 46, "passed": 34, "failed": 3, "vna": 37, "success_pct": 91.9}, {"gmail": "buy_acc_srvs", "total": 42, "passed": 29, "failed": 3, "vna": 32, "success_pct": 90.6}, {"gmail": "itsPVApro", "total": 43, "passed": 33, "failed": 6, "vna": 39, "success_pct": 84.6}]}, {"buyer": "Gramm MB", "total": 414, "passed": 204, "failed": 41, "zamena_count": 29, "queued": 169, "others": 0, "no_status": 0, "vna": 245, "success_pct": 83.3, "status_counts": {"READY TO WORK": 44, "Review": 102, "END-1. Перевязать карту перед удалением": 60, "ACTIVE": 5, "НА ЗАМЕНУ": 41, "Business Verification": 18, "В процессе верификации": 5, "END-2. Средства выведены/Карта отвязана": 139}, "by_doc": [{"doc": "1-k1", "total": 210, "passed": 98, "failed": 10, "queued": 102, "others": 0, "vna": 108, "success_pct": 90.7, "bans": {"Бан по докам": 3, "Мультиакк": 5, "Бан на ревью (ИЛИ сразу после)": 1, "Без причины": 1}}, {"doc": "LP Manager", "total": 6, "passed": 0, "failed": 0, "queued": 6, "others": 0, "vna": 0, "success_pct": 0, "bans": {}}, {"doc": "Sidorovich", "total": 103, "passed": 50, "failed": 15, "queued": 38, "others": 0, "vna": 65, "success_pct": 76.9, "bans": {"Мультиакк": 9, "Бан по докам": 5, "Без причины": 1}}, {"doc": "Viiking", "total": 93, "passed": 54, "failed": 16, "queued": 23, "others": 0, "vna": 70, "success_pct": 77.1, "bans": {"Бан по докам": 4, "Мультиакк": 12}}, {"doc": "VladN", "total": 2, "passed": 2, "failed": 0, "queued": 0, "others": 0, "vna": 2, "success_pct": 100.0, "bans": {}}], "by_gmail": [{"gmail": "DarkSt", "total": 61, "passed": 21, "failed": 0, "vna": 21, "success_pct": 100.0}, {"gmail": "buy_acc_srvs", "total": 29, "passed": 23, "failed": 0, "vna": 23, "success_pct": 100.0}, {"gmail": "itshop", "total": 26, "passed": 2, "failed": 0, "vna": 2, "success_pct": 100.0}, {"gmail": "itsPVApro", "total": 71, "passed": 37, "failed": 3, "vna": 40, "success_pct": 92.5}, {"gmail": "primeac", "total": 13, "passed": 11, "failed": 1, "vna": 12, "success_pct": 91.7}, {"gmail": "Gmail_boss", "total": 194, "passed": 106, "failed": 31, "vna": 137, "success_pct": 77.4}, {"gmail": "z2u", "total": 10, "passed": 4, "failed": 6, "vna": 10, "success_pct": 40.0}, {"gmail": "TN_GV", "total": 6, "passed": 0, "failed": 0, "vna": 0, "success_pct": 0}, {"gmail": "—", "total": 4, "passed": 0, "failed": 0, "vna": 0, "success_pct": 0}]}, {"buyer": "Drake MB", "total": 334, "passed": 163, "failed": 109, "zamena_count": 0, "queued": 50, "others": 12, "no_status": 0, "vna": 272, "success_pct": 59.9, "status_counts": {"READY TO WORK": 3, "Review": 44, "BAN other": 5, "НА ВЕРИФ": 1, "END-2. Средства выведены/Карта отвязана": 107, "НА ЗАМЕНУ": 109, "ON APPEAL": 1, "вывод средств": 6, "FREEZE": 37, "ACTIVE": 13, "END-1. Перевязать карту перед удалением": 5, "В процессе верификации": 2, "End-3 Перевязать карту но оставить на этом же статусе": 1}, "by_doc": [{"doc": "1-k1", "total": 114, "passed": 53, "failed": 18, "queued": 33, "others": 10, "vna": 71, "success_pct": 74.6, "bans": {"Упал на номер": 1, "Мультиакк": 12, "20 минутный таск": 3, "Бан по докам": 2}}, {"doc": "3-lod", "total": 1, "passed": 1, "failed": 0, "queued": 0, "others": 0, "vna": 1, "success_pct": 100.0, "bans": {}}, {"doc": "Fels", "total": 14, "passed": 3, "failed": 2, "queued": 7, "others": 2, "vna": 5, "success_pct": 60.0, "bans": {"20 минутный таск": 1, "Мультиакк": 1}}, {"doc": "Sidorovich", "total": 50, "passed": 21, "failed": 29, "queued": 0, "others": 0, "vna": 50, "success_pct": 42.0, "bans": {"Бан по докам": 14, "Мультиакк": 15}}, {"doc": "Viiking", "total": 154, "passed": 85, "failed": 60, "queued": 9, "others": 0, "vna": 145, "success_pct": 58.6, "bans": {"Бан по докам": 10, "Мультиакк": 43, "20 минутный таск": 1, "Без причины": 4, "Упал на номер": 2}}, {"doc": "—", "total": 1, "passed": 0, "failed": 0, "queued": 1, "others": 0, "vna": 0, "success_pct": 0, "bans": {}}], "by_gmail": [{"gmail": "TN_GV", "total": 5, "passed": 5, "failed": 0, "vna": 5, "success_pct": 100.0}, {"gmail": "itsPVApro", "total": 49, "passed": 30, "failed": 2, "vna": 32, "success_pct": 93.8}, {"gmail": "buy_acc_srvs", "total": 11, "passed": 5, "failed": 1, "vna": 6, "success_pct": 83.3}, {"gmail": "Gmail_boss", "total": 239, "passed": 123, "failed": 106, "vna": 229, "success_pct": 53.7}, {"gmail": "DarkSt", "total": 14, "passed": 0, "failed": 0, "vna": 0, "success_pct": 0}, {"gmail": "primeac", "total": 12, "passed": 0, "failed": 0, "vna": 0, "success_pct": 0}, {"gmail": "z2u", "total": 4, "passed": 0, "failed": 0, "vna": 0, "success_pct": 0}]}, {"buyer": "Raze MB", "total": 331, "passed": 206, "failed": 88, "zamena_count": 0, "queued": 14, "others": 23, "no_status": 0, "vna": 294, "success_pct": 70.1, "status_counts": {"ACTIVE": 31, "END-1. Перевязать карту перед удалением": 46, "READY TO WORK": 1, "END-2. Средства выведены/Карта отвязана": 113, "НА ВЕРИФ": 13, "НА ЗАМЕНУ": 88, "Active/Pause": 16, "Пересоздать каб": 8, "ON APPEAL бизнес вериф": 3, "REJECT clickbait": 12}, "by_doc": [{"doc": "1-k1", "total": 171, "passed": 109, "failed": 38, "queued": 11, "others": 13, "vna": 147, "success_pct": 74.1, "bans": {"Без причины": 7, "Бан по докам": 14, "Мультиакк": 13, "20 минутный таск": 4}}, {"doc": "3-lod", "total": 7, "passed": 5, "failed": 0, "queued": 0, "others": 2, "vna": 5, "success_pct": 100.0, "bans": {}}, {"doc": "Sidorovich", "total": 75, "passed": 49, "failed": 19, "queued": 1, "others": 6, "vna": 68, "success_pct": 72.1, "bans": {"Бан по докам": 7, "Мультиакк": 9, "Без причины": 3}}, {"doc": "Viiking", "total": 73, "passed": 42, "failed": 31, "queued": 0, "others": 0, "vna": 73, "success_pct": 57.5, "bans": {"Бан по докам": 19, "20 минутный таск": 3, "Мультиакк": 5, "Без причины": 4}}, {"doc": "—", "total": 5, "passed": 1, "failed": 0, "queued": 2, "others": 2, "vna": 1, "success_pct": 100.0, "bans": {}}], "by_gmail": [{"gmail": "itsPVApro", "total": 125, "passed": 83, "failed": 23, "vna": 106, "success_pct": 78.3}, {"gmail": "TN_GV", "total": 18, "passed": 13, "failed": 5, "vna": 18, "success_pct": 72.2}, {"gmail": "buy_acc_srvs", "total": 45, "passed": 28, "failed": 11, "vna": 39, "success_pct": 71.8}, {"gmail": "Gmail_boss", "total": 138, "passed": 82, "failed": 47, "vna": 129, "success_pct": 63.6}, {"gmail": "—", "total": 5, "passed": 0, "failed": 2, "vna": 2, "success_pct": 0.0}]}, {"buyer": "Miller MB", "total": 327, "passed": 62, "failed": 68, "zamena_count": 0, "queued": 59, "others": 137, "no_status": 1, "vna": 130, "success_pct": 47.7, "status_counts": {"READY TO WORK": 50, "Review": 4, "НА ВЕРИФ": 5, "END-2. Средства выведены/Карта отвязана": 62, "BAN обход": 106, "REJECT clickbait": 6, "BAN бизнес модели": 21, "НА ЗАМЕНУ": 68, "REJECT other": 4, "Нет статуса": 1}, "by_doc": [{"doc": "1-k1", "total": 128, "passed": 18, "failed": 3, "queued": 52, "others": 55, "vna": 21, "success_pct": 85.7, "bans": {"Без причины": 3}}, {"doc": "Fels", "total": 22, "passed": 9, "failed": 1, "queued": 0, "others": 12, "vna": 10, "success_pct": 90.0, "bans": {"Без причины": 1}}, {"doc": "Sidorovich", "total": 110, "passed": 30, "failed": 35, "queued": 2, "others": 43, "vna": 65, "success_pct": 46.2, "bans": {"Без причины": 34, "Упал на номер": 1}}, {"doc": "Viiking", "total": 62, "passed": 5, "failed": 29, "queued": 0, "others": 27, "vna": 34, "success_pct": 14.7, "bans": {"Без причины": 27, "Бан на ревью (ИЛИ сразу после)": 2}}, {"doc": "—", "total": 5, "passed": 0, "failed": 0, "queued": 5, "others": 0, "vna": 0, "success_pct": 0, "bans": {}}], "by_gmail": [{"gmail": "acmarket", "total": 19, "passed": 3, "failed": 0, "vna": 3, "success_pct": 100.0}, {"gmail": "DarkSt", "total": 33, "passed": 10, "failed": 2, "vna": 12, "success_pct": 83.3}, {"gmail": "itsPVApro", "total": 91, "passed": 28, "failed": 15, "vna": 43, "success_pct": 65.1}, {"gmail": "Gmail_boss", "total": 93, "passed": 16, "failed": 35, "vna": 51, "success_pct": 31.4}, {"gmail": "buy_acc_srvs", "total": 50, "passed": 5, "failed": 15, "vna": 20, "success_pct": 25.0}, {"gmail": "itshop", "total": 16, "passed": 0, "failed": 0, "vna": 0, "success_pct": 0}, {"gmail": "primeac", "total": 22, "passed": 0, "failed": 0, "vna": 0, "success_pct": 0}, {"gmail": "—", "total": 3, "passed": 0, "failed": 1, "vna": 1, "success_pct": 0.0}]}, {"buyer": "Arch MB", "total": 326, "passed": 47, "failed": 25, "zamena_count": 34, "queued": 143, "others": 111, "no_status": 0, "vna": 72, "success_pct": 65.3, "status_counts": {"READY TO WORK": 17, "Review": 105, "1": 5, "BAN обход": 6, "BAN бизнес модели": 24, "НА ВЕРИФ": 20, "НА ЗАМЕНУ": 25, "не выпуск AR": 3, "Ban с спендом": 7, "вывод средств": 23, "END-2. Средства выведены/Карта отвязана": 41, "diss": 1, "ON APPEAL": 1, "ACTIVE": 3, "FREEZE": 3, "Ban Publick ": 13, "CODES": 2, "WARMING": 26, "Business Verification": 1}, "by_doc": [{"doc": "1-k1", "total": 169, "passed": 11, "failed": 1, "queued": 124, "others": 33, "vna": 12, "success_pct": 91.7, "bans": {"Упал на номер": 1}}, {"doc": "3-lod", "total": 1, "passed": 0, "failed": 0, "queued": 1, "others": 0, "vna": 0, "success_pct": 0, "bans": {}}, {"doc": "Sidorovich", "total": 81, "passed": 30, "failed": 15, "queued": 2, "others": 34, "vna": 45, "success_pct": 66.7, "bans": {"Бан по докам": 4, "Без причины": 8, "Мультиакк": 3}}, {"doc": "Viiking", "total": 74, "passed": 6, "failed": 9, "queued": 16, "others": 43, "vna": 15, "success_pct": 40.0, "bans": {"Бан по докам": 3, "Без причины": 5, "Мультиакк": 1}}, {"doc": "—", "total": 1, "passed": 0, "failed": 0, "queued": 0, "others": 1, "vna": 0, "success_pct": 0, "bans": {}}], "by_gmail": [{"gmail": "DarkSt", "total": 96, "passed": 1, "failed": 0, "vna": 1, "success_pct": 100.0}, {"gmail": "itsPVApro", "total": 79, "passed": 22, "failed": 10, "vna": 32, "success_pct": 68.8}, {"gmail": "Gmail_boss", "total": 86, "passed": 24, "failed": 14, "vna": 38, "success_pct": 63.2}, {"gmail": "TN_GV", "total": 22, "passed": 0, "failed": 0, "vna": 0, "success_pct": 0}, {"gmail": "acmarket", "total": 2, "passed": 0, "failed": 0, "vna": 0, "success_pct": 0}, {"gmail": "haruu", "total": 6, "passed": 0, "failed": 0, "vna": 0, "success_pct": 0}, {"gmail": "itshop", "total": 3, "passed": 0, "failed": 0, "vna": 0, "success_pct": 0}, {"gmail": "primeac", "total": 30, "passed": 0, "failed": 1, "vna": 1, "success_pct": 0.0}, {"gmail": "smmseo", "total": 2, "passed": 0, "failed": 0, "vna": 0, "success_pct": 0}]}, {"buyer": "Travis MB", "total": 293, "passed": 70, "failed": 103, "zamena_count": 0, "queued": 29, "others": 91, "no_status": 0, "vna": 173, "success_pct": 40.5, "status_counts": {"вывод средств": 34, "Review": 21, "Ban с спендом": 6, "НА ЗАМЕНУ": 103, "BAN бизнес модели": 12, "Ban Publick ": 16, "ACTIVE": 13, "FREEZE": 10, "не выпуск AR": 3, "END-2. Средства выведены/Карта отвязана": 47, "BAN обход": 16, "НА ВЕРИФ": 1, "WARMING": 2, "READY TO WORK": 1, "diss": 1, "BAN other": 1, "Business Verification": 6}, "by_doc": [{"doc": "1-k1", "total": 86, "passed": 22, "failed": 21, "queued": 5, "others": 38, "vna": 43, "success_pct": 51.2, "bans": {"Упал на номер": 1, "Мультиакк": 9, "Бан по докам": 3, "20 минутный таск": 6, "Без причины": 2}}, {"doc": "3-lod", "total": 10, "passed": 0, "failed": 2, "queued": 1, "others": 7, "vna": 2, "success_pct": 0.0, "bans": {"20 минутный таск": 2}}, {"doc": "Fels", "total": 7, "passed": 0, "failed": 7, "queued": 0, "others": 0, "vna": 7, "success_pct": 0.0, "bans": {"Бан по докам": 3, "Без причины": 1, "Мультиакк": 3}}, {"doc": "Sidorovich", "total": 62, "passed": 11, "failed": 25, "queued": 11, "others": 15, "vna": 36, "success_pct": 30.6, "bans": {"Бан по докам": 4, "Упал на номер": 1, "20 минутный таск": 4, "Мультиакк": 6, "Без причины": 10}}, {"doc": "Viiking", "total": 111, "passed": 29, "failed": 47, "queued": 12, "others": 23, "vna": 76, "success_pct": 38.2, "bans": {"20 минутный таск": 1, "Бан по докам": 3, "Без причины": 43}}, {"doc": "—", "total": 17, "passed": 8, "failed": 1, "queued": 0, "others": 8, "vna": 9, "success_pct": 88.9, "bans": {"Без причины": 1}}], "by_gmail": [{"gmail": "itsPVApro", "total": 138, "passed": 39, "failed": 30, "vna": 69, "success_pct": 56.5}, {"gmail": "Gmail_boss", "total": 140, "passed": 30, "failed": 68, "vna": 98, "success_pct": 30.6}, {"gmail": "buy_acc_srvs", "total": 15, "passed": 1, "failed": 5, "vna": 6, "success_pct": 16.7}]}, {"buyer": "Alex MB", "total": 124, "passed": 0, "failed": 1, "zamena_count": 0, "queued": 123, "others": 0, "no_status": 0, "vna": 1, "success_pct": 0.0, "status_counts": {"READY TO WORK": 116, "НА ЗАМЕНУ": 1, "Review": 7}, "by_doc": [{"doc": "Doc", "total": 1, "passed": 0, "failed": 0, "queued": 1, "others": 0, "vna": 0, "success_pct": 0, "bans": {}}, {"doc": "Sidorovich", "total": 36, "passed": 0, "failed": 0, "queued": 36, "others": 0, "vna": 0, "success_pct": 0, "bans": {}}, {"doc": "Viiking", "total": 87, "passed": 0, "failed": 1, "queued": 86, "others": 0, "vna": 1, "success_pct": 0.0, "bans": {"Без причины": 1}}], "by_gmail": [{"gmail": "Gmail_boss", "total": 84, "passed": 0, "failed": 1, "vna": 1, "success_pct": 0.0}, {"gmail": "TN_GV", "total": 40, "passed": 0, "failed": 0, "vna": 0, "success_pct": 0}]}, {"buyer": "Michael MB", "total": 60, "passed": 0, "failed": 0, "zamena_count": 0, "queued": 60, "others": 0, "no_status": 0, "vna": 0, "success_pct": 0, "status_counts": {"READY TO WORK": 47, "Review": 13}, "by_doc": [{"doc": "1-k1", "total": 56, "passed": 0, "failed": 0, "queued": 56, "others": 0, "vna": 0, "success_pct": 0, "bans": {}}, {"doc": "6-artmak", "total": 4, "passed": 0, "failed": 0, "queued": 4, "others": 0, "vna": 0, "success_pct": 0, "bans": {}}], "by_gmail": [{"gmail": "acmarket", "total": 10, "passed": 0, "failed": 0, "vna": 0, "success_pct": 0}, {"gmail": "itshop", "total": 24, "passed": 0, "failed": 0, "vna": 0, "success_pct": 0}, {"gmail": "primeac", "total": 22, "passed": 0, "failed": 0, "vna": 0, "success_pct": 0}, {"gmail": "smmacc", "total": 1, "passed": 0, "failed": 0, "vna": 0, "success_pct": 0}, {"gmail": "smmseo", "total": 3, "passed": 0, "failed": 0, "vna": 0, "success_pct": 0}]}, {"buyer": "Mose MB", "total": 55, "passed": 2, "failed": 4, "zamena_count": 0, "queued": 33, "others": 16, "no_status": 0, "vna": 6, "success_pct": 33.3, "status_counts": {"READY TO WORK": 29, "В процессе верификации": 3, "WAITING FOR WARM": 12, "НА ЗАМЕНУ": 4, "BAN мультиаккаунт": 1, "BAN обход": 2, "ACTIVE": 2, "BAN бизнес модели": 1, "НА ВЕРИФ": 1}, "by_doc": [{"doc": "1-k1", "total": 6, "passed": 0, "failed": 0, "queued": 6, "others": 0, "vna": 0, "success_pct": 0, "bans": {}}, {"doc": "Doc", "total": 6, "passed": 0, "failed": 0, "queued": 6, "others": 0, "vna": 0, "success_pct": 0, "bans": {}}, {"doc": "Sidorovich", "total": 15, "passed": 1, "failed": 1, "queued": 10, "others": 3, "vna": 2, "success_pct": 50.0, "bans": {"Без причины": 1}}, {"doc": "Viiking", "total": 28, "passed": 1, "failed": 3, "queued": 11, "others": 13, "vna": 4, "success_pct": 25.0, "bans": {"Без причины": 3}}], "by_gmail": [{"gmail": "TN_GV", "total": 29, "passed": 2, "failed": 4, "vna": 6, "success_pct": 33.3}, {"gmail": "DarkSt", "total": 6, "passed": 0, "failed": 0, "vna": 0, "success_pct": 0}, {"gmail": "Gmail_boss", "total": 20, "passed": 0, "failed": 0, "vna": 0, "success_pct": 0}]}, {"buyer": "Marina MB", "total": 12, "passed": 0, "failed": 0, "zamena_count": 0, "queued": 12, "others": 0, "no_status": 0, "vna": 0, "success_pct": 0, "status_counts": {"READY TO WORK": 5, "Review": 7}, "by_doc": [{"doc": "Viiking", "total": 12, "passed": 0, "failed": 0, "queued": 12, "others": 0, "vna": 0, "success_pct": 0, "bans": {}}], "by_gmail": [{"gmail": "Gmail_boss", "total": 12, "passed": 0, "failed": 0, "vna": 0, "success_pct": 0}]}, {"buyer": "Kolos MB", "total": 10, "passed": 0, "failed": 1, "zamena_count": 0, "queued": 9, "others": 0, "no_status": 0, "vna": 1, "success_pct": 0.0, "status_counts": {"Review": 6, "НА ЗАМЕНУ": 1, "В процессе верификации": 3}, "by_doc": [{"doc": "1-k1", "total": 10, "passed": 0, "failed": 1, "queued": 9, "others": 0, "vna": 1, "success_pct": 0.0, "bans": {"Упал на номер": 1}}], "by_gmail": [{"gmail": "DarkSt", "total": 6, "passed": 0, "failed": 0, "vna": 0, "success_pct": 0}, {"gmail": "primeac", "total": 3, "passed": 0, "failed": 1, "vna": 1, "success_pct": 0.0}, {"gmail": "z2u", "total": 1, "passed": 0, "failed": 0, "vna": 0, "success_pct": 0}]}, {"buyer": "Tim MB", "total": 10, "passed": 0, "failed": 0, "zamena_count": 0, "queued": 10, "others": 0, "no_status": 0, "vna": 0, "success_pct": 0, "status_counts": {"READY TO WORK": 10}, "by_doc": [{"doc": "1-k1", "total": 10, "passed": 0, "failed": 0, "queued": 10, "others": 0, "vna": 0, "success_pct": 0, "bans": {}}], "by_gmail": [{"gmail": "buy_acc_srvs", "total": 5, "passed": 0, "failed": 0, "vna": 0, "success_pct": 0}, {"gmail": "itsPVApro", "total": 5, "passed": 0, "failed": 0, "vna": 0, "success_pct": 0}]}];
-const RESERVE_TOTALS = {"mar": 76, "apr": 339, "total_mar": 3442, "total_apr": 1210};
-const BUYERS_DATA_MAR = [{"buyer": "Rook MB", "total": 538, "passed": 280, "failed": 77, "zamena_count": 0, "queued": 121, "others": 60, "no_status": 0, "vna": 357, "success_pct": 78.4, "status_counts": {"Review": 117, "ACTIVE": 32, "WARMING": 16, "BAN бизнес модели": 35, "READY TO WORK": 4, "НА ЗАМЕНУ": 77, "End-3 Перевязать карту но оставить на этом же статусе": 25, "END-2. Средства выведены/Карта отвязана": 223, "REJECT инф": 6, "BAN: инф сайт => бан обход": 1, "BAN обход": 2}, "by_doc": [{"doc": "1-k1", "total": 309, "passed": 143, "failed": 11, "queued": 114, "others": 41, "vna": 154, "success_pct": 92.9, "bans": {"Без причины": 5, "Бан по докам": 5, "Мультиакк": 1}}, {"doc": "3-lod", "total": 53, "passed": 46, "failed": 2, "queued": 0, "others": 5, "vna": 48, "success_pct": 95.8, "bans": {"20 минутный таск": 1, "Без причины": 1}}, {"doc": "Fels", "total": 16, "passed": 12, "failed": 0, "queued": 0, "others": 4, "vna": 12, "success_pct": 100.0, "bans": {}}, {"doc": "Sidorovich", "total": 98, "passed": 50, "failed": 33, "queued": 7, "others": 8, "vna": 83, "success_pct": 60.2, "bans": {"Мультиакк": 13, "Бан по докам": 10, "Без причины": 10}}, {"doc": "Viiking", "total": 62, "passed": 29, "failed": 31, "queued": 0, "others": 2, "vna": 60, "success_pct": 48.3, "bans": {"Бан по докам": 7, "Без причины": 21, "Мультиакк": 3}}], "by_gmail": [{"gmail": "TN_GV", "total": 1, "passed": 1, "failed": 0, "vna": 1, "success_pct": 100.0}, {"gmail": "acmarket", "total": 34, "passed": 28, "failed": 0, "vna": 28, "success_pct": 100.0}, {"gmail": "primeac", "total": 35, "passed": 8, "failed": 0, "vna": 8, "success_pct": 100.0}, {"gmail": "itsPVApro", "total": 148, "passed": 115, "failed": 8, "vna": 123, "success_pct": 93.5}, {"gmail": "buy_acc_srvs", "total": 35, "passed": 26, "failed": 3, "vna": 29, "success_pct": 89.7}, {"gmail": "DarkSt", "total": 113, "passed": 16, "failed": 3, "vna": 19, "success_pct": 84.2}, {"gmail": "—", "total": 5, "passed": 4, "failed": 1, "vna": 5, "success_pct": 80.0}, {"gmail": "Gmail_boss", "total": 162, "passed": 82, "failed": 62, "vna": 144, "success_pct": 56.9}, {"gmail": "haruu", "total": 1, "passed": 0, "failed": 0, "vna": 0, "success_pct": 0}, {"gmail": "z2u", "total": 4, "passed": 0, "failed": 0, "vna": 0, "success_pct": 0}]}, {"buyer": "Avi MB", "total": 419, "passed": 279, "failed": 45, "zamena_count": 0, "queued": 38, "others": 57, "no_status": 0, "vna": 324, "success_pct": 86.1, "status_counts": {"REJECT clickbait": 14, "ACTIVE": 37, "BAN обход": 24, "Review": 32, "END-1. Перевязать карту перед удалением": 2, "В процессе верификации": 6, "END-2. Средства выведены/Карта отвязана": 219, "ON APPEAL": 11, "НА ЗАМЕНУ": 45, "End-3 Перевязать карту но оставить на этом же статусе": 21, "WARMING": 8}, "by_doc": [{"doc": "1-k1", "total": 207, "passed": 137, "failed": 1, "queued": 35, "others": 34, "vna": 138, "success_pct": 99.3, "bans": {"Без причины": 1}}, {"doc": "3-lod", "total": 12, "passed": 6, "failed": 0, "queued": 0, "others": 6, "vna": 6, "success_pct": 100.0, "bans": {}}, {"doc": "Fels", "total": 1, "passed": 1, "failed": 0, "queued": 0, "others": 0, "vna": 1, "success_pct": 100.0, "bans": {}}, {"doc": "Sidorovich", "total": 167, "passed": 116, "failed": 40, "queued": 1, "others": 10, "vna": 156, "success_pct": 74.4, "bans": {"Бан по докам": 14, "Мультиакк": 25, "Упал на номер": 1}}, {"doc": "Viiking", "total": 32, "passed": 19, "failed": 4, "queued": 2, "others": 7, "vna": 23, "success_pct": 82.6, "bans": {"Бан по докам": 1, "Мультиакк": 1, "Без причины": 2}}], "by_gmail": [{"gmail": "acmarket", "total": 75, "passed": 24, "failed": 0, "vna": 24, "success_pct": 100.0}, {"gmail": "buy_acc_srvs", "total": 49, "passed": 48, "failed": 0, "vna": 48, "success_pct": 100.0}, {"gmail": "itsPVApro", "total": 39, "passed": 39, "failed": 0, "vna": 39, "success_pct": 100.0}, {"gmail": "—", "total": 1, "passed": 1, "failed": 0, "vna": 1, "success_pct": 100.0}, {"gmail": "DarkSt", "total": 70, "passed": 49, "failed": 1, "vna": 50, "success_pct": 98.0}, {"gmail": "Gmail_boss", "total": 184, "passed": 118, "failed": 44, "vna": 162, "success_pct": 72.8}, {"gmail": "primeac", "total": 1, "passed": 0, "failed": 0, "vna": 0, "success_pct": 0}]}, {"buyer": "Gadi MB", "total": 362, "passed": 64, "failed": 25, "zamena_count": 4, "queued": 30, "others": 243, "no_status": 0, "vna": 89, "success_pct": 71.9, "status_counts": {"Review": 16, "НА ЗАМЕНУ": 25, "НА ВЕРИФ": 6, "WARMING": 8, "READY TO WORK": 8, "BAN бизнес модели": 2, "BAN обход": 232, "END-2. Средства выведены/Карта отвязана": 64, "ЗАМЕНЕН": 1}, "by_doc": [{"doc": "1-k1", "total": 239, "passed": 44, "failed": 9, "queued": 19, "others": 167, "vna": 53, "success_pct": 83.0, "bans": {"Мультиакк": 2, "Бан по докам": 6, "Без причины": 1}}, {"doc": "3-lod", "total": 28, "passed": 3, "failed": 0, "queued": 10, "others": 15, "vna": 3, "success_pct": 100.0, "bans": {}}, {"doc": "Sidorovich", "total": 36, "passed": 9, "failed": 6, "queued": 0, "others": 21, "vna": 15, "success_pct": 60.0, "bans": {"Мультиакк": 4, "Бан по докам": 2}}, {"doc": "Viiking", "total": 52, "passed": 8, "failed": 10, "queued": 1, "others": 33, "vna": 18, "success_pct": 44.4, "bans": {"Бан по докам": 7, "20 минутный таск": 1, "Мультиакк": 2}}, {"doc": "—", "total": 7, "passed": 0, "failed": 0, "queued": 0, "others": 7, "vna": 0, "success_pct": 0, "bans": {}}], "by_gmail": [{"gmail": "acmarket", "total": 24, "passed": 3, "failed": 0, "vna": 3, "success_pct": 100.0}, {"gmail": "itsPVApro", "total": 152, "passed": 32, "failed": 2, "vna": 34, "success_pct": 94.1}, {"gmail": "buy_acc_srvs", "total": 56, "passed": 8, "failed": 6, "vna": 14, "success_pct": 57.1}, {"gmail": "Gmail_boss", "total": 67, "passed": 17, "failed": 13, "vna": 30, "success_pct": 56.7}, {"gmail": "DarkSt", "total": 59, "passed": 3, "failed": 3, "vna": 6, "success_pct": 50.0}, {"gmail": "—", "total": 4, "passed": 1, "failed": 1, "vna": 2, "success_pct": 50.0}]}, {"buyer": "Gramm MB", "total": 360, "passed": 199, "failed": 41, "zamena_count": 0, "queued": 120, "others": 0, "no_status": 0, "vna": 240, "success_pct": 82.9, "status_counts": {"END-1. Перевязать карту перед удалением": 55, "Review": 68, "READY TO WORK": 29, "ACTIVE": 5, "НА ЗАМЕНУ": 41, "Business Verification": 18, "В процессе верификации": 5, "END-2. Средства выведены/Карта отвязана": 139}, "by_doc": [{"doc": "1-k1", "total": 166, "passed": 93, "failed": 10, "queued": 63, "others": 0, "vna": 103, "success_pct": 90.3, "bans": {"Бан по докам": 3, "Мультиакк": 5, "Бан на ревью (ИЛИ сразу после)": 1, "Без причины": 1}}, {"doc": "Sidorovich", "total": 99, "passed": 50, "failed": 15, "queued": 34, "others": 0, "vna": 65, "success_pct": 76.9, "bans": {"Мультиакк": 9, "Бан по докам": 5, "Без причины": 1}}, {"doc": "Viiking", "total": 93, "passed": 54, "failed": 16, "queued": 23, "others": 0, "vna": 70, "success_pct": 77.1, "bans": {"Бан по докам": 4, "Мультиакк": 12}}, {"doc": "VladN", "total": 2, "passed": 2, "failed": 0, "queued": 0, "others": 0, "vna": 2, "success_pct": 100.0, "bans": {}}], "by_gmail": [{"gmail": "DarkSt", "total": 43, "passed": 18, "failed": 0, "vna": 18, "success_pct": 100.0}, {"gmail": "buy_acc_srvs", "total": 29, "passed": 23, "failed": 0, "vna": 23, "success_pct": 100.0}, {"gmail": "itsPVApro", "total": 71, "passed": 37, "failed": 3, "vna": 40, "success_pct": 92.5}, {"gmail": "primeac", "total": 13, "passed": 11, "failed": 1, "vna": 12, "success_pct": 91.7}, {"gmail": "Gmail_boss", "total": 194, "passed": 106, "failed": 31, "vna": 137, "success_pct": 77.4}, {"gmail": "z2u", "total": 10, "passed": 4, "failed": 6, "vna": 10, "success_pct": 40.0}]}, {"buyer": "Drake MB", "total": 334, "passed": 163, "failed": 109, "zamena_count": 0, "queued": 50, "others": 12, "no_status": 0, "vna": 272, "success_pct": 59.9, "status_counts": {"READY TO WORK": 3, "Review": 44, "BAN other": 5, "НА ВЕРИФ": 1, "END-2. Средства выведены/Карта отвязана": 107, "НА ЗАМЕНУ": 109, "ON APPEAL": 1, "вывод средств": 6, "FREEZE": 37, "ACTIVE": 13, "END-1. Перевязать карту перед удалением": 5, "В процессе верификации": 2, "End-3 Перевязать карту но оставить на этом же статусе": 1}, "by_doc": [{"doc": "1-k1", "total": 114, "passed": 53, "failed": 18, "queued": 33, "others": 10, "vna": 71, "success_pct": 74.6, "bans": {"Упал на номер": 1, "Мультиакк": 12, "20 минутный таск": 3, "Бан по докам": 2}}, {"doc": "3-lod", "total": 1, "passed": 1, "failed": 0, "queued": 0, "others": 0, "vna": 1, "success_pct": 100.0, "bans": {}}, {"doc": "Fels", "total": 14, "passed": 3, "failed": 2, "queued": 7, "others": 2, "vna": 5, "success_pct": 60.0, "bans": {"20 минутный таск": 1, "Мультиакк": 1}}, {"doc": "Sidorovich", "total": 50, "passed": 21, "failed": 29, "queued": 0, "others": 0, "vna": 50, "success_pct": 42.0, "bans": {"Бан по докам": 14, "Мультиакк": 15}}, {"doc": "Viiking", "total": 154, "passed": 85, "failed": 60, "queued": 9, "others": 0, "vna": 145, "success_pct": 58.6, "bans": {"Бан по докам": 10, "Мультиакк": 43, "20 минутный таск": 1, "Без причины": 4, "Упал на номер": 2}}, {"doc": "—", "total": 1, "passed": 0, "failed": 0, "queued": 1, "others": 0, "vna": 0, "success_pct": 0, "bans": {}}], "by_gmail": [{"gmail": "TN_GV", "total": 5, "passed": 5, "failed": 0, "vna": 5, "success_pct": 100.0}, {"gmail": "itsPVApro", "total": 49, "passed": 30, "failed": 2, "vna": 32, "success_pct": 93.8}, {"gmail": "buy_acc_srvs", "total": 11, "passed": 5, "failed": 1, "vna": 6, "success_pct": 83.3}, {"gmail": "Gmail_boss", "total": 239, "passed": 123, "failed": 106, "vna": 229, "success_pct": 53.7}, {"gmail": "DarkSt", "total": 14, "passed": 0, "failed": 0, "vna": 0, "success_pct": 0}, {"gmail": "primeac", "total": 12, "passed": 0, "failed": 0, "vna": 0, "success_pct": 0}, {"gmail": "z2u", "total": 4, "passed": 0, "failed": 0, "vna": 0, "success_pct": 0}]}, {"buyer": "Raze MB", "total": 331, "passed": 206, "failed": 88, "zamena_count": 0, "queued": 14, "others": 23, "no_status": 0, "vna": 294, "success_pct": 70.1, "status_counts": {"ACTIVE": 31, "END-1. Перевязать карту перед удалением": 46, "READY TO WORK": 1, "END-2. Средства выведены/Карта отвязана": 113, "НА ВЕРИФ": 13, "НА ЗАМЕНУ": 88, "Active/Pause": 16, "Пересоздать каб": 8, "ON APPEAL бизнес вериф": 3, "REJECT clickbait": 12}, "by_doc": [{"doc": "1-k1", "total": 171, "passed": 109, "failed": 38, "queued": 11, "others": 13, "vna": 147, "success_pct": 74.1, "bans": {"Без причины": 7, "Бан по докам": 14, "Мультиакк": 13, "20 минутный таск": 4}}, {"doc": "3-lod", "total": 7, "passed": 5, "failed": 0, "queued": 0, "others": 2, "vna": 5, "success_pct": 100.0, "bans": {}}, {"doc": "Sidorovich", "total": 75, "passed": 49, "failed": 19, "queued": 1, "others": 6, "vna": 68, "success_pct": 72.1, "bans": {"Бан по докам": 7, "Мультиакк": 9, "Без причины": 3}}, {"doc": "Viiking", "total": 73, "passed": 42, "failed": 31, "queued": 0, "others": 0, "vna": 73, "success_pct": 57.5, "bans": {"Бан по докам": 19, "20 минутный таск": 3, "Мультиакк": 5, "Без причины": 4}}, {"doc": "—", "total": 5, "passed": 1, "failed": 0, "queued": 2, "others": 2, "vna": 1, "success_pct": 100.0, "bans": {}}], "by_gmail": [{"gmail": "itsPVApro", "total": 125, "passed": 83, "failed": 23, "vna": 106, "success_pct": 78.3}, {"gmail": "TN_GV", "total": 18, "passed": 13, "failed": 5, "vna": 18, "success_pct": 72.2}, {"gmail": "buy_acc_srvs", "total": 45, "passed": 28, "failed": 11, "vna": 39, "success_pct": 71.8}, {"gmail": "Gmail_boss", "total": 138, "passed": 82, "failed": 47, "vna": 129, "success_pct": 63.6}, {"gmail": "—", "total": 5, "passed": 0, "failed": 2, "vna": 2, "success_pct": 0.0}]}, {"buyer": "BadBunny", "total": 311, "passed": 163, "failed": 71, "zamena_count": 0, "queued": 55, "others": 22, "no_status": 0, "vna": 234, "success_pct": 69.7, "status_counts": {"Review": 53, "READY TO WORK": 2, "ON APPEAL": 6, "вывод средств": 12, "END-2. Средства выведены/Карта отвязана": 138, "END-1. Перевязать карту перед удалением": 11, "НА ЗАМЕНУ": 71, "ACTIVE": 12, "BAN other": 1, "APPEAL SUCCESSFUL  ПП/Unpaid/БизВериф": 2, "1": 2, "ЗАМЕНЕН": 1}, "by_doc": [{"doc": "1-k1", "total": 118, "passed": 49, "failed": 14, "queued": 38, "others": 17, "vna": 63, "success_pct": 77.8, "bans": {"Мультиакк": 13, "Бан по докам": 1}}, {"doc": "3-lod", "total": 5, "passed": 1, "failed": 0, "queued": 2, "others": 2, "vna": 1, "success_pct": 100.0, "bans": {}}, {"doc": "Doc", "total": 7, "passed": 6, "failed": 0, "queued": 1, "others": 0, "vna": 6, "success_pct": 100.0, "bans": {}}, {"doc": "Fels", "total": 5, "passed": 3, "failed": 2, "queued": 0, "others": 0, "vna": 5, "success_pct": 60.0, "bans": {"Мультиакк": 2}}, {"doc": "Sidorovich", "total": 63, "passed": 42, "failed": 16, "queued": 3, "others": 2, "vna": 58, "success_pct": 72.4, "bans": {"Мультиакк": 9, "Бан по докам": 6, "20 минутный таск": 1}}, {"doc": "Viiking", "total": 80, "passed": 41, "failed": 27, "queued": 11, "others": 1, "vna": 68, "success_pct": 60.3, "bans": {"Мультиакк": 18, "Бан по докам": 8, "20 минутный таск": 1}}, {"doc": "—", "total": 33, "passed": 21, "failed": 12, "queued": 0, "others": 0, "vna": 33, "success_pct": 63.6, "bans": {"Бан по докам": 8, "Мультиакк": 2, "20 минутный таск": 1, "Упал на номер": 1}}], "by_gmail": [{"gmail": "DarkSt", "total": 45, "passed": 19, "failed": 0, "vna": 19, "success_pct": 100.0}, {"gmail": "TN_GV", "total": 6, "passed": 4, "failed": 0, "vna": 4, "success_pct": 100.0}, {"gmail": "acmarket", "total": 20, "passed": 7, "failed": 0, "vna": 7, "success_pct": 100.0}, {"gmail": "buy_acc_srvs", "total": 25, "passed": 21, "failed": 0, "vna": 21, "success_pct": 100.0}, {"gmail": "itsPVApro", "total": 18, "passed": 8, "failed": 0, "vna": 8, "success_pct": 100.0}, {"gmail": "Gmail_boss", "total": 174, "passed": 104, "failed": 58, "vna": 162, "success_pct": 64.2}, {"gmail": "primeac", "total": 5, "passed": 0, "failed": 0, "vna": 0, "success_pct": 0}, {"gmail": "z2u", "total": 18, "passed": 0, "failed": 13, "vna": 13, "success_pct": 0.0}]}, {"buyer": "Travis MB", "total": 293, "passed": 70, "failed": 103, "zamena_count": 0, "queued": 29, "others": 91, "no_status": 0, "vna": 173, "success_pct": 40.5, "status_counts": {"вывод средств": 34, "Review": 21, "Ban с спендом": 6, "НА ЗАМЕНУ": 103, "BAN бизнес модели": 12, "Ban Publick ": 16, "ACTIVE": 13, "FREEZE": 10, "не выпуск AR": 3, "END-2. Средства выведены/Карта отвязана": 47, "BAN обход": 16, "НА ВЕРИФ": 1, "WARMING": 2, "READY TO WORK": 1, "diss": 1, "BAN other": 1, "Business Verification": 6}, "by_doc": [{"doc": "1-k1", "total": 86, "passed": 22, "failed": 21, "queued": 5, "others": 38, "vna": 43, "success_pct": 51.2, "bans": {"Упал на номер": 1, "Мультиакк": 9, "Бан по докам": 3, "20 минутный таск": 6, "Без причины": 2}}, {"doc": "3-lod", "total": 10, "passed": 0, "failed": 2, "queued": 1, "others": 7, "vna": 2, "success_pct": 0.0, "bans": {"20 минутный таск": 2}}, {"doc": "Fels", "total": 7, "passed": 0, "failed": 7, "queued": 0, "others": 0, "vna": 7, "success_pct": 0.0, "bans": {"Бан по докам": 3, "Без причины": 1, "Мультиакк": 3}}, {"doc": "Sidorovich", "total": 62, "passed": 11, "failed": 25, "queued": 11, "others": 15, "vna": 36, "success_pct": 30.6, "bans": {"Бан по докам": 4, "Упал на номер": 1, "20 минутный таск": 4, "Мультиакк": 6, "Без причины": 10}}, {"doc": "Viiking", "total": 111, "passed": 29, "failed": 47, "queued": 12, "others": 23, "vna": 76, "success_pct": 38.2, "bans": {"20 минутный таск": 1, "Бан по докам": 3, "Без причины": 43}}, {"doc": "—", "total": 17, "passed": 8, "failed": 1, "queued": 0, "others": 8, "vna": 9, "success_pct": 88.9, "bans": {"Без причины": 1}}], "by_gmail": [{"gmail": "itsPVApro", "total": 138, "passed": 39, "failed": 30, "vna": 69, "success_pct": 56.5}, {"gmail": "Gmail_boss", "total": 140, "passed": 30, "failed": 68, "vna": 98, "success_pct": 30.6}, {"gmail": "buy_acc_srvs", "total": 15, "passed": 1, "failed": 5, "vna": 6, "success_pct": 16.7}]}, {"buyer": "Shadow MB", "total": 291, "passed": 229, "failed": 13, "zamena_count": 0, "queued": 49, "others": 0, "no_status": 0, "vna": 242, "success_pct": 94.6, "status_counts": {"END-1. Перевязать карту перед удалением": 135, "ACTIVE": 46, "Review": 28, "READY TO WORK": 13, "В процессе верификации": 4, "НА ЗАМЕНУ": 13, "END-2. Средства выведены/Карта отвязана": 48, "НА ВЕРИФ": 4}, "by_doc": [{"doc": "1-k1", "total": 180, "passed": 137, "failed": 8, "queued": 35, "others": 0, "vna": 145, "success_pct": 94.5, "bans": {"Без причины": 7, "Бан по докам": 1}}, {"doc": "3-lod", "total": 9, "passed": 7, "failed": 0, "queued": 2, "others": 0, "vna": 7, "success_pct": 100.0, "bans": {}}, {"doc": "Fels", "total": 4, "passed": 3, "failed": 0, "queued": 1, "others": 0, "vna": 3, "success_pct": 100.0, "bans": {}}, {"doc": "Sidorovich", "total": 33, "passed": 29, "failed": 1, "queued": 3, "others": 0, "vna": 30, "success_pct": 96.7, "bans": {"Мультиакк": 1}}, {"doc": "Viiking", "total": 50, "passed": 42, "failed": 4, "queued": 4, "others": 0, "vna": 46, "success_pct": 91.3, "bans": {"Без причины": 2, "Мультиакк": 2}}, {"doc": "—", "total": 15, "passed": 11, "failed": 0, "queued": 4, "others": 0, "vna": 11, "success_pct": 100.0, "bans": {}}], "by_gmail": [{"gmail": "DarkSt", "total": 74, "passed": 50, "failed": 0, "vna": 50, "success_pct": 100.0}, {"gmail": "acmarket", "total": 15, "passed": 13, "failed": 0, "vna": 13, "success_pct": 100.0}, {"gmail": "primeac", "total": 37, "passed": 32, "failed": 0, "vna": 32, "success_pct": 100.0}, {"gmail": "—", "total": 15, "passed": 11, "failed": 0, "vna": 11, "success_pct": 100.0}, {"gmail": "TN_GV", "total": 29, "passed": 28, "failed": 1, "vna": 29, "success_pct": 96.6}, {"gmail": "Gmail_boss", "total": 46, "passed": 34, "failed": 3, "vna": 37, "success_pct": 91.9}, {"gmail": "buy_acc_srvs", "total": 32, "passed": 28, "failed": 3, "vna": 31, "success_pct": 90.3}, {"gmail": "itsPVApro", "total": 43, "passed": 33, "failed": 6, "vna": 39, "success_pct": 84.6}]}, {"buyer": "Miller MB", "total": 278, "passed": 62, "failed": 68, "zamena_count": 0, "queued": 10, "others": 137, "no_status": 1, "vna": 130, "success_pct": 47.7, "status_counts": {"Review": 4, "НА ВЕРИФ": 5, "READY TO WORK": 1, "END-2. Средства выведены/Карта отвязана": 62, "BAN обход": 106, "REJECT clickbait": 6, "BAN бизнес модели": 21, "НА ЗАМЕНУ": 68, "REJECT other": 4, "Нет статуса": 1}, "by_doc": [{"doc": "1-k1", "total": 84, "passed": 18, "failed": 3, "queued": 8, "others": 55, "vna": 21, "success_pct": 85.7, "bans": {"Без причины": 3}}, {"doc": "Fels", "total": 22, "passed": 9, "failed": 1, "queued": 0, "others": 12, "vna": 10, "success_pct": 90.0, "bans": {"Без причины": 1}}, {"doc": "Sidorovich", "total": 110, "passed": 30, "failed": 35, "queued": 2, "others": 43, "vna": 65, "success_pct": 46.2, "bans": {"Без причины": 34, "Упал на номер": 1}}, {"doc": "Viiking", "total": 62, "passed": 5, "failed": 29, "queued": 0, "others": 27, "vna": 34, "success_pct": 14.7, "bans": {"Без причины": 27, "Бан на ревью (ИЛИ сразу после)": 2}}], "by_gmail": [{"gmail": "acmarket", "total": 11, "passed": 3, "failed": 0, "vna": 3, "success_pct": 100.0}, {"gmail": "DarkSt", "total": 33, "passed": 10, "failed": 2, "vna": 12, "success_pct": 83.3}, {"gmail": "itsPVApro", "total": 91, "passed": 28, "failed": 15, "vna": 43, "success_pct": 65.1}, {"gmail": "Gmail_boss", "total": 93, "passed": 16, "failed": 35, "vna": 51, "success_pct": 31.4}, {"gmail": "buy_acc_srvs", "total": 47, "passed": 5, "failed": 15, "vna": 20, "success_pct": 25.0}, {"gmail": "—", "total": 3, "passed": 0, "failed": 1, "vna": 1, "success_pct": 0.0}]}, {"buyer": "Arch MB", "total": 275, "passed": 47, "failed": 25, "zamena_count": 9, "queued": 97, "others": 106, "no_status": 0, "vna": 72, "success_pct": 65.3, "status_counts": {"Review": 72, "BAN обход": 6, "BAN бизнес модели": 24, "НА ВЕРИФ": 15, "НА ЗАМЕНУ": 25, "не выпуск AR": 3, "Ban с спендом": 7, "вывод средств": 23, "END-2. Средства выведены/Карта отвязана": 41, "READY TO WORK": 9, "ON APPEAL": 1, "ACTIVE": 3, "FREEZE": 3, "Ban Publick ": 13, "CODES": 2, "WARMING": 26, "1": 1, "Business Verification": 1}, "by_doc": [{"doc": "1-k1", "total": 119, "passed": 11, "failed": 1, "queued": 79, "others": 28, "vna": 12, "success_pct": 91.7, "bans": {"Упал на номер": 1}}, {"doc": "Sidorovich", "total": 81, "passed": 30, "failed": 15, "queued": 2, "others": 34, "vna": 45, "success_pct": 66.7, "bans": {"Бан по докам": 4, "Без причины": 8, "Мультиакк": 3}}, {"doc": "Viiking", "total": 74, "passed": 6, "failed": 9, "queued": 16, "others": 43, "vna": 15, "success_pct": 40.0, "bans": {"Бан по докам": 3, "Без причины": 5, "Мультиакк": 1}}, {"doc": "—", "total": 1, "passed": 0, "failed": 0, "queued": 0, "others": 1, "vna": 0, "success_pct": 0, "bans": {}}], "by_gmail": [{"gmail": "DarkSt", "total": 65, "passed": 1, "failed": 0, "vna": 1, "success_pct": 100.0}, {"gmail": "itsPVApro", "total": 71, "passed": 22, "failed": 10, "vna": 32, "success_pct": 68.8}, {"gmail": "Gmail_boss", "total": 86, "passed": 24, "failed": 14, "vna": 38, "success_pct": 63.2}, {"gmail": "TN_GV", "total": 22, "passed": 0, "failed": 0, "vna": 0, "success_pct": 0}, {"gmail": "haruu", "total": 6, "passed": 0, "failed": 0, "vna": 0, "success_pct": 0}, {"gmail": "primeac", "total": 25, "passed": 0, "failed": 1, "vna": 1, "success_pct": 0.0}]}, {"buyer": "Gogi MB", "total": 265, "passed": 119, "failed": 63, "zamena_count": 0, "queued": 30, "others": 53, "no_status": 0, "vna": 182, "success_pct": 65.4, "status_counts": {"НА ЗАМЕНУ": 63, "Ban Publick ": 12, "ON APPEAL": 5, "END-2. Средства выведены/Карта отвязана": 86, "В процессе верификации": 6, "ACTIVE": 14, "APPEAL SUCCESSFUL  ПП/Unpaid/БизВериф": 2, "вывод средств": 34, "NEW_ADS": 1, "END-1. Перевязать карту перед удалением": 17, "Review": 23, "BAN other": 1, "НА ВЕРИФ": 1}, "by_doc": [{"doc": "1-k1", "total": 113, "passed": 58, "failed": 15, "queued": 3, "others": 37, "vna": 73, "success_pct": 79.5, "bans": {"Мультиакк": 6, "Бан по докам": 2, "Без причины": 4, "20 минутный таск": 3}}, {"doc": "Fels", "total": 10, "passed": 4, "failed": 1, "queued": 0, "others": 5, "vna": 5, "success_pct": 80.0, "bans": {"Без причины": 1}}, {"doc": "Sidorovich", "total": 80, "passed": 35, "failed": 18, "queued": 20, "others": 7, "vna": 53, "success_pct": 66.0, "bans": {"20 минутный таск": 5, "Бан по докам": 6, "Мультиакк": 7}}, {"doc": "Viiking", "total": 62, "passed": 22, "failed": 29, "queued": 7, "others": 4, "vna": 51, "success_pct": 43.1, "bans": {"Бан по докам": 18, "20 минутный таск": 2, "Мультиакк": 9}}], "by_gmail": [{"gmail": "TN_GV", "total": 3, "passed": 1, "failed": 0, "vna": 1, "success_pct": 100.0}, {"gmail": "buy_acc_srvs", "total": 60, "passed": 38, "failed": 7, "vna": 45, "success_pct": 84.4}, {"gmail": "itsPVApro", "total": 93, "passed": 41, "failed": 22, "vna": 63, "success_pct": 65.1}, {"gmail": "DarkSt", "total": 20, "passed": 7, "failed": 4, "vna": 11, "success_pct": 63.6}, {"gmail": "Gmail_boss", "total": 89, "passed": 32, "failed": 30, "vna": 62, "success_pct": 51.6}]}, {"buyer": "Alex MB", "total": 124, "passed": 0, "failed": 1, "zamena_count": 0, "queued": 123, "others": 0, "no_status": 0, "vna": 1, "success_pct": 0.0, "status_counts": {"READY TO WORK": 116, "НА ЗАМЕНУ": 1, "Review": 7}, "by_doc": [{"doc": "Doc", "total": 1, "passed": 0, "failed": 0, "queued": 1, "others": 0, "vna": 0, "success_pct": 0, "bans": {}}, {"doc": "Sidorovich", "total": 36, "passed": 0, "failed": 0, "queued": 36, "others": 0, "vna": 0, "success_pct": 0, "bans": {}}, {"doc": "Viiking", "total": 87, "passed": 0, "failed": 1, "queued": 86, "others": 0, "vna": 1, "success_pct": 0.0, "bans": {"Без причины": 1}}], "by_gmail": [{"gmail": "Gmail_boss", "total": 84, "passed": 0, "failed": 1, "vna": 1, "success_pct": 0.0}, {"gmail": "TN_GV", "total": 40, "passed": 0, "failed": 0, "vna": 0, "success_pct": 0}]}, {"buyer": "Mose MB", "total": 49, "passed": 2, "failed": 4, "zamena_count": 0, "queued": 27, "others": 16, "no_status": 0, "vna": 6, "success_pct": 33.3, "status_counts": {"READY TO WORK": 23, "В процессе верификации": 3, "WAITING FOR WARM": 12, "НА ЗАМЕНУ": 4, "BAN мультиаккаунт": 1, "BAN обход": 2, "ACTIVE": 2, "BAN бизнес модели": 1, "НА ВЕРИФ": 1}, "by_doc": [{"doc": "Doc", "total": 6, "passed": 0, "failed": 0, "queued": 6, "others": 0, "vna": 0, "success_pct": 0, "bans": {}}, {"doc": "Sidorovich", "total": 15, "passed": 1, "failed": 1, "queued": 10, "others": 3, "vna": 2, "success_pct": 50.0, "bans": {"Без причины": 1}}, {"doc": "Viiking", "total": 28, "passed": 1, "failed": 3, "queued": 11, "others": 13, "vna": 4, "success_pct": 25.0, "bans": {"Без причины": 3}}], "by_gmail": [{"gmail": "TN_GV", "total": 29, "passed": 2, "failed": 4, "vna": 6, "success_pct": 33.3}, {"gmail": "Gmail_boss", "total": 20, "passed": 0, "failed": 0, "vna": 0, "success_pct": 0}]}, {"buyer": "Marina MB", "total": 12, "passed": 0, "failed": 0, "zamena_count": 0, "queued": 12, "others": 0, "no_status": 0, "vna": 0, "success_pct": 0, "status_counts": {"READY TO WORK": 5, "Review": 7}, "by_doc": [{"doc": "Viiking", "total": 12, "passed": 0, "failed": 0, "queued": 12, "others": 0, "vna": 0, "success_pct": 0, "bans": {}}], "by_gmail": [{"gmail": "Gmail_boss", "total": 12, "passed": 0, "failed": 0, "vna": 0, "success_pct": 0}]}, {"buyer": "Kolos MB", "total": 10, "passed": 0, "failed": 1, "zamena_count": 0, "queued": 9, "others": 0, "no_status": 0, "vna": 1, "success_pct": 0.0, "status_counts": {"Review": 6, "НА ЗАМЕНУ": 1, "В процессе верификации": 3}, "by_doc": [{"doc": "1-k1", "total": 10, "passed": 0, "failed": 1, "queued": 9, "others": 0, "vna": 1, "success_pct": 0.0, "bans": {"Упал на номер": 1}}], "by_gmail": [{"gmail": "DarkSt", "total": 6, "passed": 0, "failed": 0, "vna": 0, "success_pct": 0}, {"gmail": "primeac", "total": 3, "passed": 0, "failed": 1, "vna": 1, "success_pct": 0.0}, {"gmail": "z2u", "total": 1, "passed": 0, "failed": 0, "vna": 0, "success_pct": 0}]}, {"buyer": "Tim MB", "total": 10, "passed": 0, "failed": 0, "zamena_count": 0, "queued": 10, "others": 0, "no_status": 0, "vna": 0, "success_pct": 0, "status_counts": {"READY TO WORK": 10}, "by_doc": [{"doc": "1-k1", "total": 10, "passed": 0, "failed": 0, "queued": 10, "others": 0, "vna": 0, "success_pct": 0, "bans": {}}], "by_gmail": [{"gmail": "buy_acc_srvs", "total": 5, "passed": 0, "failed": 0, "vna": 0, "success_pct": 0}, {"gmail": "itsPVApro", "total": 5, "passed": 0, "failed": 0, "vna": 0, "success_pct": 0}]}];
-const BUYERS_DATA_APR = [{"buyer": "Gogi MB", "total": 171, "passed": 32, "failed": 0, "zamena_count": 4, "queued": 75, "others": 64, "no_status": 0, "vna": 32, "success_pct": 100.0, "status_counts": {"NEW_ADS": 59, "В процессе верификации": 17, "Ban Publick ": 1, "APPEAL SUCCESSFUL  ПП/Unpaid/БизВериф": 17, "Review": 58, "ON APPEAL": 4, "ACTIVE": 10, "END-2. Средства выведены/Карта отвязана": 5}, "by_doc": [{"doc": "1-k1", "total": 111, "passed": 15, "failed": 0, "queued": 35, "others": 61, "vna": 15, "success_pct": 100.0, "bans": {}}, {"doc": "3-lod", "total": 13, "passed": 3, "failed": 0, "queued": 8, "others": 2, "vna": 3, "success_pct": 100.0, "bans": {}}, {"doc": "Sidorovich", "total": 10, "passed": 1, "failed": 0, "queued": 9, "others": 0, "vna": 1, "success_pct": 100.0, "bans": {}}, {"doc": "Viiking", "total": 36, "passed": 13, "failed": 0, "queued": 23, "others": 0, "vna": 13, "success_pct": 100.0, "bans": {}}, {"doc": "—", "total": 1, "passed": 0, "failed": 0, "queued": 0, "others": 1, "vna": 0, "success_pct": 0, "bans": {}}], "by_gmail": [{"gmail": "DarkSt", "total": 42, "passed": 7, "failed": 0, "vna": 7, "success_pct": 100.0}, {"gmail": "Gmail_boss", "total": 14, "passed": 3, "failed": 0, "vna": 3, "success_pct": 100.0}, {"gmail": "TN_GV", "total": 32, "passed": 11, "failed": 0, "vna": 11, "success_pct": 100.0}, {"gmail": "acmarket", "total": 13, "passed": 2, "failed": 0, "vna": 2, "success_pct": 100.0}, {"gmail": "itshop", "total": 50, "passed": 4, "failed": 0, "vna": 4, "success_pct": 100.0}, {"gmail": "smmacc", "total": 15, "passed": 5, "failed": 0, "vna": 5, "success_pct": 100.0}, {"gmail": "primeac", "total": 5, "passed": 0, "failed": 0, "vna": 0, "success_pct": 0}]}, {"buyer": "Rook MB", "total": 149, "passed": 0, "failed": 0, "zamena_count": 4, "queued": 149, "others": 0, "no_status": 0, "vna": 0, "success_pct": 0, "status_counts": {"READY TO WORK": 139, "Review": 10}, "by_doc": [{"doc": "1-k1", "total": 149, "passed": 0, "failed": 0, "queued": 149, "others": 0, "vna": 0, "success_pct": 0, "bans": {}}], "by_gmail": [{"gmail": "DarkSt", "total": 62, "passed": 0, "failed": 0, "vna": 0, "success_pct": 0}, {"gmail": "acmarket", "total": 10, "passed": 0, "failed": 0, "vna": 0, "success_pct": 0}, {"gmail": "itshop", "total": 30, "passed": 0, "failed": 0, "vna": 0, "success_pct": 0}, {"gmail": "primeac", "total": 47, "passed": 0, "failed": 0, "vna": 0, "success_pct": 0}]}, {"buyer": "Gadi MB", "total": 135, "passed": 0, "failed": 0, "zamena_count": 2, "queued": 135, "others": 0, "no_status": 0, "vna": 0, "success_pct": 0, "status_counts": {"READY TO WORK": 131, "НА ВЕРИФ": 3, "Review": 1}, "by_doc": [{"doc": "1-k1", "total": 127, "passed": 0, "failed": 0, "queued": 127, "others": 0, "vna": 0, "success_pct": 0, "bans": {}}, {"doc": "6-artmak", "total": 3, "passed": 0, "failed": 0, "queued": 3, "others": 0, "vna": 0, "success_pct": 0, "bans": {}}, {"doc": "Fels", "total": 4, "passed": 0, "failed": 0, "queued": 4, "others": 0, "vna": 0, "success_pct": 0, "bans": {}}, {"doc": "Sidorovich", "total": 1, "passed": 0, "failed": 0, "queued": 1, "others": 0, "vna": 0, "success_pct": 0, "bans": {}}], "by_gmail": [{"gmail": "DarkSt", "total": 58, "passed": 0, "failed": 0, "vna": 0, "success_pct": 0}, {"gmail": "acmarket", "total": 35, "passed": 0, "failed": 0, "vna": 0, "success_pct": 0}, {"gmail": "itsPVApro", "total": 4, "passed": 0, "failed": 0, "vna": 0, "success_pct": 0}, {"gmail": "itshop", "total": 19, "passed": 0, "failed": 0, "vna": 0, "success_pct": 0}, {"gmail": "primeac", "total": 18, "passed": 0, "failed": 0, "vna": 0, "success_pct": 0}, {"gmail": "—", "total": 1, "passed": 0, "failed": 0, "vna": 0, "success_pct": 0}]}, {"buyer": "BadBunny", "total": 127, "passed": 0, "failed": 0, "zamena_count": 46, "queued": 10, "others": 117, "no_status": 0, "vna": 0, "success_pct": 0, "status_counts": {"NEW_ADS": 117, "Review": 4, "READY TO WORK": 6}, "by_doc": [{"doc": "1-k1", "total": 120, "passed": 0, "failed": 0, "queued": 10, "others": 110, "vna": 0, "success_pct": 0, "bans": {}}, {"doc": "3-lod", "total": 5, "passed": 0, "failed": 0, "queued": 0, "others": 5, "vna": 0, "success_pct": 0, "bans": {}}, {"doc": "—", "total": 2, "passed": 0, "failed": 0, "queued": 0, "others": 2, "vna": 0, "success_pct": 0, "bans": {}}], "by_gmail": [{"gmail": "DarkSt", "total": 77, "passed": 0, "failed": 0, "vna": 0, "success_pct": 0}, {"gmail": "itshop", "total": 37, "passed": 0, "failed": 0, "vna": 0, "success_pct": 0}, {"gmail": "primeac", "total": 7, "passed": 0, "failed": 0, "vna": 0, "success_pct": 0}, {"gmail": "smmacc", "total": 2, "passed": 0, "failed": 0, "vna": 0, "success_pct": 0}, {"gmail": "smmseo", "total": 4, "passed": 0, "failed": 0, "vna": 0, "success_pct": 0}]}, {"buyer": "Shadow MB", "total": 124, "passed": 6, "failed": 0, "zamena_count": 2, "queued": 118, "others": 0, "no_status": 0, "vna": 6, "success_pct": 100.0, "status_counts": {"READY TO WORK": 47, "Review": 71, "END-1. Перевязать карту перед удалением": 6}, "by_doc": [{"doc": "1-k1", "total": 110, "passed": 4, "failed": 0, "queued": 106, "others": 0, "vna": 4, "success_pct": 100.0, "bans": {}}, {"doc": "—", "total": 14, "passed": 2, "failed": 0, "queued": 12, "others": 0, "vna": 2, "success_pct": 100.0, "bans": {}}], "by_gmail": [{"gmail": "acmarket", "total": 32, "passed": 2, "failed": 0, "vna": 2, "success_pct": 100.0}, {"gmail": "buy_acc_srvs", "total": 10, "passed": 1, "failed": 0, "vna": 1, "success_pct": 100.0}, {"gmail": "itshop", "total": 11, "passed": 2, "failed": 0, "vna": 2, "success_pct": 100.0}, {"gmail": "primeac", "total": 71, "passed": 1, "failed": 0, "vna": 1, "success_pct": 100.0}]}, {"buyer": "Avi MB", "total": 104, "passed": 1, "failed": 0, "zamena_count": 27, "queued": 99, "others": 4, "no_status": 0, "vna": 1, "success_pct": 100.0, "status_counts": {"READY TO WORK": 86, "Review": 11, "BAN обход": 2, "ACTIVE": 1, "В процессе верификации": 2, "REJECT clickbait": 2}, "by_doc": [{"doc": "1-k1", "total": 104, "passed": 1, "failed": 0, "queued": 99, "others": 4, "vna": 1, "success_pct": 100.0, "bans": {}}], "by_gmail": [{"gmail": "itshop", "total": 60, "passed": 1, "failed": 0, "vna": 1, "success_pct": 100.0}, {"gmail": "DarkSt", "total": 39, "passed": 0, "failed": 0, "vna": 0, "success_pct": 0}, {"gmail": "primeac", "total": 5, "passed": 0, "failed": 0, "vna": 0, "success_pct": 0}]}, {"buyer": "Michael MB", "total": 60, "passed": 0, "failed": 0, "zamena_count": 0, "queued": 60, "others": 0, "no_status": 0, "vna": 0, "success_pct": 0, "status_counts": {"READY TO WORK": 47, "Review": 13}, "by_doc": [{"doc": "1-k1", "total": 56, "passed": 0, "failed": 0, "queued": 56, "others": 0, "vna": 0, "success_pct": 0, "bans": {}}, {"doc": "6-artmak", "total": 4, "passed": 0, "failed": 0, "queued": 4, "others": 0, "vna": 0, "success_pct": 0, "bans": {}}], "by_gmail": [{"gmail": "acmarket", "total": 10, "passed": 0, "failed": 0, "vna": 0, "success_pct": 0}, {"gmail": "itshop", "total": 24, "passed": 0, "failed": 0, "vna": 0, "success_pct": 0}, {"gmail": "primeac", "total": 22, "passed": 0, "failed": 0, "vna": 0, "success_pct": 0}, {"gmail": "smmacc", "total": 1, "passed": 0, "failed": 0, "vna": 0, "success_pct": 0}, {"gmail": "smmseo", "total": 3, "passed": 0, "failed": 0, "vna": 0, "success_pct": 0}]}, {"buyer": "Gramm MB", "total": 54, "passed": 5, "failed": 0, "zamena_count": 29, "queued": 49, "others": 0, "no_status": 0, "vna": 5, "success_pct": 100.0, "status_counts": {"READY TO WORK": 15, "Review": 34, "END-1. Перевязать карту перед удалением": 5}, "by_doc": [{"doc": "1-k1", "total": 44, "passed": 5, "failed": 0, "queued": 39, "others": 0, "vna": 5, "success_pct": 100.0, "bans": {}}, {"doc": "LP Manager", "total": 6, "passed": 0, "failed": 0, "queued": 6, "others": 0, "vna": 0, "success_pct": 0, "bans": {}}, {"doc": "Sidorovich", "total": 4, "passed": 0, "failed": 0, "queued": 4, "others": 0, "vna": 0, "success_pct": 0, "bans": {}}], "by_gmail": [{"gmail": "DarkSt", "total": 18, "passed": 3, "failed": 0, "vna": 3, "success_pct": 100.0}, {"gmail": "itshop", "total": 26, "passed": 2, "failed": 0, "vna": 2, "success_pct": 100.0}, {"gmail": "TN_GV", "total": 6, "passed": 0, "failed": 0, "vna": 0, "success_pct": 0}, {"gmail": "—", "total": 4, "passed": 0, "failed": 0, "vna": 0, "success_pct": 0}]}, {"buyer": "Arch MB", "total": 51, "passed": 0, "failed": 0, "zamena_count": 25, "queued": 46, "others": 5, "no_status": 0, "vna": 0, "success_pct": 0, "status_counts": {"READY TO WORK": 8, "Review": 33, "1": 4, "НА ВЕРИФ": 5, "diss": 1}, "by_doc": [{"doc": "1-k1", "total": 50, "passed": 0, "failed": 0, "queued": 45, "others": 5, "vna": 0, "success_pct": 0, "bans": {}}, {"doc": "3-lod", "total": 1, "passed": 0, "failed": 0, "queued": 1, "others": 0, "vna": 0, "success_pct": 0, "bans": {}}], "by_gmail": [{"gmail": "DarkSt", "total": 31, "passed": 0, "failed": 0, "vna": 0, "success_pct": 0}, {"gmail": "acmarket", "total": 2, "passed": 0, "failed": 0, "vna": 0, "success_pct": 0}, {"gmail": "itsPVApro", "total": 8, "passed": 0, "failed": 0, "vna": 0, "success_pct": 0}, {"gmail": "itshop", "total": 3, "passed": 0, "failed": 0, "vna": 0, "success_pct": 0}, {"gmail": "primeac", "total": 5, "passed": 0, "failed": 0, "vna": 0, "success_pct": 0}, {"gmail": "smmseo", "total": 2, "passed": 0, "failed": 0, "vna": 0, "success_pct": 0}]}, {"buyer": "Miller MB", "total": 49, "passed": 0, "failed": 0, "zamena_count": 0, "queued": 49, "others": 0, "no_status": 0, "vna": 0, "success_pct": 0, "status_counts": {"READY TO WORK": 49}, "by_doc": [{"doc": "1-k1", "total": 44, "passed": 0, "failed": 0, "queued": 44, "others": 0, "vna": 0, "success_pct": 0, "bans": {}}, {"doc": "—", "total": 5, "passed": 0, "failed": 0, "queued": 5, "others": 0, "vna": 0, "success_pct": 0, "bans": {}}], "by_gmail": [{"gmail": "acmarket", "total": 8, "passed": 0, "failed": 0, "vna": 0, "success_pct": 0}, {"gmail": "buy_acc_srvs", "total": 3, "passed": 0, "failed": 0, "vna": 0, "success_pct": 0}, {"gmail": "itshop", "total": 16, "passed": 0, "failed": 0, "vna": 0, "success_pct": 0}, {"gmail": "primeac", "total": 22, "passed": 0, "failed": 0, "vna": 0, "success_pct": 0}]}, {"buyer": "Mose MB", "total": 6, "passed": 0, "failed": 0, "zamena_count": 0, "queued": 6, "others": 0, "no_status": 0, "vna": 0, "success_pct": 0, "status_counts": {"READY TO WORK": 6}, "by_doc": [{"doc": "1-k1", "total": 6, "passed": 0, "failed": 0, "queued": 6, "others": 0, "vna": 0, "success_pct": 0, "bans": {}}], "by_gmail": [{"gmail": "DarkSt", "total": 6, "passed": 0, "failed": 0, "vna": 0, "success_pct": 0}]}];
-const APRIL_1_MS = 1774994400000; // April 1 00:00 Europe/Brussels (UTC+2)
-let activePeriod = 'apr';
-
-
-function toggleComment(id){
-  const body=document.getElementById('comment-body-'+id);
-  const arrow=document.getElementById('comment-arrow-'+id);
-  const isOpen=body.style.display!=='none';
-  body.style.display=isOpen?'none':'block';
-  arrow.textContent=isOpen?'▶':'▼';
-  if(!isOpen) document.getElementById('comment_'+id).focus();
-}
-
-function saveComment(id, val) {
-  try { localStorage.setItem('comment_' + id, val); } catch(e) {}
-  const el = document.getElementById('saved_' + id);
-  if (el) { el.style.display = 'block'; setTimeout(() => { el.style.display = 'none'; }, 1500); }
-  const preview = document.getElementById('comment-preview-' + id);
-  if (preview) preview.textContent = val;
-}
-function loadComment(id) {
-  try { return localStorage.getItem('comment_' + id) || ''; } catch(e) { return ''; }
-}
-
-function farmColor(p){return p>=80?'#3a7d15':p>=60?'#9a5c08':'#c02020';}
-function verColor(p){return p>=80?'#3a7d15':p>=60?'#9a5c08':'#c02020';}
-function verBg(p){return p>=80?{bg:'#E3F3D5',c:'#2d6010'}:p>=60?{bg:'#FEF0D8',c:'#7a4a08'}:{bg:'#FDEAEA',c:'#8f2020'};}
-function badgeClass(p){return p>=80?'badge-green':p>=60?'badge-amber':'badge-red';}
-
-function setPeriod(p) {
-  activePeriod = p;
-  document.querySelectorAll('.period-btn').forEach(btn => {
-    const m = btn.getAttribute('onclick').match(/setPeriod\('(\w+)'\)/);
-    btn.classList.toggle('active', m && m[1] === p);
-  });
-  render();
-  const buyersTab = document.getElementById('tab-buyers');
-  if(buyersTab && buyersTab.classList.contains('active')) renderBuyers();
-}
-
-function getFiltered(){
-  const g=document.getElementById('filter-gmail').value;
-  const dc=document.getElementById('filter-doc').value;
-  const idQ=document.getElementById('filter-id').value.trim();
-  let d=[...DATA];
-  if(activePeriod === 'mar') d = d.filter(x => x.date_created_ms > 0 && x.date_created_ms < APRIL_1_MS);
-  else if(activePeriod === 'apr') d = d.filter(x => x.date_created_ms >= APRIL_1_MS);
-  if(idQ) d=d.filter(x=>x.id===idQ);
-  if(g) d=d.filter(x=>x.gmail===g);
-  if(dc) d=d.filter(x=>x.docs.some(doc=>doc.doc===dc));
-  const hideEmpty=document.getElementById('hide-empty');
-  if(hideEmpty&&hideEmpty.checked) d=d.filter(x=>Number(x.valid)>0);
-  const s=document.getElementById('sort-by').value;
-  const getVerPct = x => {
-    const allDocs = x.docs||[];
-    const totalPassed = allDocs.reduce((s,d)=>s+Number(d.passed||0),0);
-    const totalVna = allDocs.reduce((s,d)=>s+Number(d.vna||0),0);
-    return totalVna>0 ? totalPassed/totalVna*100 : -1;
-  };
-  if(s==='valid_desc') d.sort((a,b)=>b.valid_pct-a.valid_pct);
-  else if(s==='valid_asc') d.sort((a,b)=>a.valid_pct-b.valid_pct);
-  else if(s==='ver_desc') d.sort((a,b)=>getVerPct(b)-getVerPct(a));
-  else if(s==='ver_asc') d.sort((a,b)=>getVerPct(a)-getVerPct(b));
-  else d.sort((a,b)=>Number(a.id)-Number(b.id));
-  return d;
-}
-
-function fmtDate(ms){
-  if(!ms) return '';
-  const d=new Date(Number(ms));
-  return d.toLocaleDateString('ru-RU',{day:'2-digit',month:'2-digit',year:'2-digit'});
-}
-
-function render(){
-  const data=getFiltered();
-  const tot=activePeriod==='all'?data.reduce((s,d)=>s+Number(d.total),0):(RESERVE_TOTALS['total_'+activePeriod]||data.reduce((s,d)=>s+Number(d.total),0));
-  const val=data.reduce((s,d)=>s+Number(d.valid),0);
-  const inv=data.reduce((s,d)=>s+Number(d.invalid),0);
-  const passedFarm=data.reduce((s,d)=>s+Number(d.passed_farm||0),0);
-  const notChecked=data.reduce((s,d)=>s+Number(d.not_checked||0),0);
-  const farmChecked=passedFarm+inv;
-  const totalReserve=activePeriod==='all'?data.reduce((s,d)=>s+Number(d.reserve||0),0):(RESERVE_TOTALS[activePeriod]||0);
-  const totalAfter1=data.reduce((s,d)=>s+Number(d.after1||0),0);
-  const totalAfterWarm=data.reduce((s,d)=>s+Number(d.after_warm||0),0);
-  const totalPust=data.reduce((s,d)=>s+Math.max(0,Number(d.invalid||0)-Number(d.after1||0)-Number(d.after_warm||0)),0);
-  const farmPct=farmChecked?Math.round(passedFarm/farmChecked*1000)/10:0;
-  const invPct=farmChecked?Math.round(inv/farmChecked*1000)/10:0;
-  const pustPct=farmChecked?Math.round(totalPust/farmChecked*1000)/10:0;
-  const after1Pct=farmChecked?Math.round(totalAfter1/farmChecked*1000)/10:0;
-  const afterWarmPct=farmChecked?Math.round(totalAfterWarm/farmChecked*1000)/10:0;
-  const wv=data.flatMap(d=>d.docs).filter(d=>Number(d.vna)>0);
-  const avgVer=wv.length?Math.round(wv.reduce((s,d)=>s+Number(d.success_pct),0)/wv.length*10)/10:0;
-
-  // Doc seller breakdown
-  const docStats = {};
-  data.forEach(d => {
-    (d.docs||[]).forEach(doc => {
-      if(!docStats[doc.doc]) docStats[doc.doc] = {passed:0, vna:0};
-      docStats[doc.doc].passed += Number(doc.passed||0);
-      docStats[doc.doc].vna += Number(doc.vna||0);
-    });
-  });
-  const docRows = Object.entries(docStats)
-    .filter(([,v]) => v.vna > 0)
-    .sort((a,b) => (b[1].passed/b[1].vna) - (a[1].passed/a[1].vna))
-    .map(([doc, v]) => {
-      const p = Math.round(v.passed/v.vna*100);
-      const clr = p>=80?'#3a7d15':p>=60?'#9a5c08':'#c02020';
-      return `<div style="display:flex;justify-content:space-between;font-size:11px;margin-top:3px;"><span style="color:#888780;">${doc}</span><span style="font-weight:500;color:${clr};">${p}% <span style="color:#bbb;font-weight:400;">(${v.vna})</span></span></div>`;
-    }).join('');
-
-  document.getElementById('top-metrics').innerHTML=`
-    <div class="metric">
-      <div class="metric-label">Покупок почт</div>
-      <div class="metric-value">${data.length}</div>
-    </div>
-    <div class="metric">
-      <div class="metric-label">Всего почт</div>
-      <div class="metric-value">${tot.toLocaleString()}</div>
-      <div class="metric-hint" style="margin-top:8px;font-size:13px;">произведено аккаунтов: <span style="font-weight:600;font-size:15px;color:#fff;">${val.toLocaleString()}</span></div>
-      ${totalReserve>0?`<div class="metric-hint" style="margin-top:6px;font-size:13px;">в запасе: <span style="font-weight:600;font-size:15px;color:#fff;">${totalReserve.toLocaleString()}</span></div>`:''}
-    </div>
-    <div class="metric">
-      <div class="metric-label">Валидность почт после фарма</div>
-      <div class="metric-value">${farmPct}%</div>
-      <div class="metric-hint" style="margin-top:4px;">
-        <div style="color:#888780;font-size:11px;margin-bottom:4px;">из ${farmChecked.toLocaleString()} проверенных</div>
-        потери: ${invPct}%
-        ${pustPct>0?`<div style="margin-top:3px;display:flex;justify-content:space-between;"><span>пустышки</span><span style="font-weight:500;">${pustPct}% (${totalPust})</span></div>`:''}
-        ${after1Pct>0?`<div style="display:flex;justify-content:space-between;"><span>после 1 логина</span><span style="font-weight:500;">${after1Pct}% (${totalAfter1})</span></div>`:''}
-        ${afterWarmPct>0?`<div style="display:flex;justify-content:space-between;"><span>после прогрева</span><span style="font-weight:500;">${afterWarmPct}% (${totalAfterWarm})</span></div>`:''}
-        ${notChecked>0?`<div style="margin-top:5px;display:flex;justify-content:space-between;color:#666664;"><span>⏳ не проверено</span><span style="font-weight:500;">${notChecked.toLocaleString()}</span></div>`:''}
-      </div>
-    </div>
-    <div class="metric">
-      <div class="metric-label">Прошли верификацию</div>
-      <div class="metric-value">${avgVer}%</div>
-      <div class="metric-hint" style="margin-bottom:6px;">% аккаунтов прошедших верификацию у баера</div>
-      ${docRows}
-    </div>`;
-
-  const dc=document.getElementById('filter-doc').value;
-  document.getElementById('cards').innerHTML=data.length===0
-    ?`<div class="empty-state">Нет данных по выбранным фильтрам</div>`
-    :data.map(d=>{
-      const visibleDocs=dc?d.docs.filter(x=>x.doc===dc):d.docs;
-      const docsHtml=visibleDocs.length?`
-        <div class="divider"></div>
-        ${visibleDocs.map(doc=>{
-          if(doc.vna===0&&doc.not_yet===0) return `<div class="doc-block"><div class="doc-name-row"><span class="doc-name">${doc.doc}</span><span class="doc-no-vna">нет данных</span></div></div>`;
-          const passed=Number(doc.passed||0);
-          const failed=Number(doc.failed||0);
-          const queued_n=Number(doc.queued||0);
-          const others_n=Object.values(doc.others||{}).reduce((a,b)=>a+b,0);
-          const total_acc=Number(doc.valid||0);
-          const total_v=passed+failed+queued_n+others_n;
-          const pPass=total_acc?Math.round(passed/total_acc*100):0;
-          const pFail=total_acc?Math.round(failed/total_acc*100):0;
-          const pQueue=total_acc?Math.round(queued_n/total_acc*100):0;
-          const pOther=total_acc?Math.round(others_n/total_acc*100):0;
-          const queueTags=doc.queue_counts&&Object.keys(doc.queue_counts).length>0
-            ?Object.entries(doc.queue_counts).map(([s,n])=>`<span class="stag stag-queue">${s}: ${n}</span>`).join(''):'';
-          const otherTags=doc.others&&Object.keys(doc.others).length>0
-            ?Object.entries(doc.others).map(([s,n])=>`<span class="stag stag-other">${s}: ${n}</span>`).join(''):'';
-          const verContent=total_acc>0?`
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
-              <span class="stage-label">Верификация</span>
-              <span class="stage-count">${total_acc} аккаунтов</span>
-            </div>
-            <div class="stack-bar">
-              <div class="stack-seg" style="width:${pPass}%;background:#3a7d15;"></div>
-              <div class="stack-seg" style="width:${pFail}%;background:#c02020;"></div>
-              <div class="stack-seg" style="width:${pQueue}%;background:#185FA5;"></div>
-              <div class="stack-seg" style="width:${pOther}%;background:#534AB7;"></div>
-            </div>
-            <div class="stack-tags">
-              ${passed>0?`<span class="stag stag-pass">прошли: ${passed}</span>`:''}
-              ${failed>0?`<span class="stag stag-fail">на замену: ${failed}</span>`:''}
-              ${queueTags}
-              ${otherTags}
-            </div>`
-          :`<span class="stage-label">Верификация</span> <span class="stage-count" style="color:#bbb;font-size:11px;">нет данных</span>`;
-          return `<div class="doc-block">
-            <div class="doc-name-row"><span class="doc-name">${doc.doc}</span></div>
-            ${verContent}
-          </div>`;
-        }).join('')}`
-      :`<div class="divider"></div><div class="doc-no-vna">нет данных по верификации</div>`;
-
-      const farmCheckedCard = Number(d.passed_farm||0) + Number(d.invalid||0);
-      const notCheckedCard = Number(d.not_checked||0);
-      const notCheckedNote = notCheckedCard > 0
-        ? `<div style="font-size:11px;color:#666664;margin-top:4px;">⏳ не обработано: <span style="font-weight:500;color:#888780;">${notCheckedCard}</span></div>`
-        : '';
-      return `<div class="card">
-        <div class="card-header">
-          <div>
-          <div class="card-id">Закупка #${d.id}</div>
-          <div class="card-gmail">${d.gmail}${d.date_created_ms?` · <span style="color:#bbb;">${fmtDate(d.date_created_ms)}</span>`:''}</div>
-        </div>
-          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">
-            <span class="card-badge ${badgeClass(d.valid_pct)}">${farmCheckedCard>0?'фарм: '+d.valid_pct+'%':'⏳ в обработке'}</span>
-            ${(()=>{
-              const allPassed=(d.docs||[]).reduce((s,x)=>s+Number(x.passed||0),0);
-              const allVna=(d.docs||[]).reduce((s,x)=>s+Number(x.vna||0),0);
-              if(allVna===0) return '';
-              const vp=Math.round(allPassed/allVna*100);
-              const clr=vp>=80?'#2d6010':vp>=60?'#7a4a08':'#8f2020';
-              const bg=vp>=80?'#E3F3D5':vp>=60?'#FEF0D8':'#FDEAEA';
-              const docLines=(d.docs||[])
-                .filter(x=>Number(x.vna||0)>0)
-                .map(x=>{
-                  const p=Math.round(Number(x.passed||0)/Number(x.vna)*100);
-                  return `${x.doc}: ${p}% (${x.vna} акк.)`;
-                }).join('&#10;');
-              return `<span style="font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;background:${bg};color:${clr};cursor:default;"
-                title="${docLines}">вериф: ${vp}%</span>`;
-            })()}
-          </div>
-        </div>
-        <div class="farm-section">
-          <div class="farm-label-row">
-            <span class="farm-label">Валидных почт с фарма</span>
-            <span class="farm-counts">${farmCheckedCard>0?`${d.passed_farm} из ${farmCheckedCard}`:`0 из ${d.real_total}`}</span>
-          </div>
-          <div class="bar-bg"><div class="bar-fill" style="width:${d.valid_pct}%;background:${farmColor(d.valid_pct)};"></div></div>
-          ${notCheckedNote}
-        </div>
-        ${docsHtml}
-        <div class="card-comment" id="comment-wrap-${d.id}">
-          <div onclick="toggleComment('${d.id}')" style="display:flex;align-items:center;gap:6px;cursor:pointer;margin-top:2px;">
-            <span class="comment-label" style="margin:0;">Комментарий</span>
-            <span id="comment-arrow-${d.id}" style="font-size:10px;color:#bbb;">▶</span>
-            <span id="comment-preview-${d.id}" style="font-size:12px;color:#aaa;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
-          </div>
-          <div id="comment-body-${d.id}" style="display:none;margin-top:6px;">
-            <textarea
-              class="comment-input"
-              id="comment_${d.id}"
-              placeholder="Добавить заметку по закупке..."
-              onchange="saveComment('${d.id}', this.value)"
-              oninput="saveComment('${d.id}', this.value)"
-              style="min-height:50px;"
-            ></textarea>
-            <div class="comment-saved" id="saved_${d.id}">Сохранено</div>
-          </div>
-        </div>
-      </div>`;
-    }).join('');
-
-  const docs=['1-k1','3-lod','Fels'];
-  data.forEach(d => {
-    const ta = document.getElementById('comment_' + d.id);
-    const saved = loadComment(d.id);
-    if (ta) ta.value = saved;
-    const preview = document.getElementById('comment-preview-' + d.id);
-    if (preview && saved) preview.textContent = saved;
-  });
-
-  document.getElementById('heatmap').innerHTML=`
-    <thead><tr>
-      <th>ID</th><th>Gmail Seller</th><th>Валид. почт</th>
-      ${docs.map(d=>`<th>${d}</th>`).join('')}
-    </tr></thead>
-    <tbody>${data.map(d=>{
-      const cells=docs.map(doc=>{
-        const f=d.docs.find(x=>x.doc===doc);
-        if(!f||f.vna===0) return `<td style="background:#222220;color:#383836;">—</td>`;
-        const c=f.success_pct>=80?{bg:'#1d2b1a',c:'#6db85a'}:f.success_pct>=60?{bg:'#2b2318',c:'#d4944a'}:{bg:'#2b1a1a',c:'#c05050'};
-        const bans=f.bans||{};
-        const banKeys=Object.keys(bans);
-        let tooltipRows='';
-        if(f.failed>0){
-          tooltipRows+=`<div style="color:#aaa;margin-bottom:3px;">на замену: ${f.failed} акк.</div>`;
-          if(banKeys.length>0){
-            tooltipRows+=banKeys.map(k=>`<div><span style="color:#aaa;">${k}:</span> ${bans[k].n} (${bans[k].pct}%)</div>`).join('');
-          } else {
-            tooltipRows+=`<div style="color:#aaa;font-style:italic;">причины не указаны</div>`;
-          }
-        } else {
-          tooltipRows=`<div style="color:#9FE1CB;">все прошли верификацию</div>`;
-        }
-        const tooltip=`<div class="tooltip"><div style="font-weight:600;margin-bottom:4px;">${doc} #${d.id}</div><div style="color:#aaa;margin-bottom:4px;">прошли: ${f.passed} / ${f.vna}</div>${tooltipRows}</div>`;
-        const banRows = Object.entries(f.bans||{}).map(([k,v])=>[k, v.n+' ('+v.pct+'%)']);
-        const allRows = [
-          ['прошли', f.passed],
-          ['на замену', f.failed],
-          ['всего', f.vna],
-          ...banRows
-        ];
-        const dataAttr = encodeURIComponent(JSON.stringify({title: doc+' #'+d.id, rows: allRows}));
-        return `<td class="hm-cell" style="background:${c.bg};color:${c.c};cursor:pointer;"
-          onmouseenter="const p=JSON.parse(decodeURIComponent('${dataAttr}'));showHmPopup(event,p.title,p.rows)"
-          onmouseleave="hideHmPopup()"
-        >${f.success_pct}%</td>`;
-      }).join('');
-      return `<tr>
-        <td class="id-cell">#${d.id}</td>
-        <td class="gmail-cell">${d.gmail}</td>
-        <td class="farm-cell" style="color:${farmColor(d.valid_pct)};">${d.valid_pct}%</td>
-        ${cells}
-      </tr>`;
-    }).join('')}</tbody>`;
-}
-
-const gmails=[...new Set(DATA.map(d=>d.gmail))].sort();
-const sel=document.getElementById('filter-gmail');
-gmails.forEach(g=>{const o=document.createElement('option');o.value=g;o.textContent=g;sel.appendChild(o);});
-
-const allDocs=[...new Set(DATA.flatMap(d=>d.docs.map(x=>x.doc)))].sort();
-const dsel=document.getElementById('filter-doc');
-allDocs.forEach(d=>{const o=document.createElement('option');o.value=d;o.textContent=d;dsel.appendChild(o);});
-
-render();
-
-// BUYERS
-function verCol(p){return p>=80?'#3a7d15':p>=60?'#9a5c08':'#c02020';}
-
-function renderBuyers(){
-  const data = activePeriod === 'mar' ? BUYERS_DATA_MAR : activePeriod === 'apr' ? BUYERS_DATA_APR : BUYERS_DATA;
-  if(!data||data.length===0){
-    document.getElementById('buyer-cards').innerHTML='<div class="empty-state">Нет данных — запустите скрипт обновления</div>';
-    return;
-  }
-  const sel = document.getElementById('buyer-filter');
-  if(sel){
-    const prev = sel.value;
-    sel.innerHTML = '<option value="">Все</option>';
-    data.forEach(b=>{const o=document.createElement('option');o.value=b.buyer;o.textContent=b.buyer;sel.appendChild(o);});
-    sel.value = data.find(b=>b.buyer===prev) ? prev : '';
-  }
-  const bfilter = sel ? sel.value : '';
-  const filteredData = bfilter ? data.filter(b=>b.buyer===bfilter) : data;
-
-  const totAccounts=filteredData.reduce((s,b)=>s+b.total,0);
-  const totPassed=filteredData.reduce((s,b)=>s+b.passed,0);
-  const totFailed=filteredData.reduce((s,b)=>s+b.failed,0);
-  const totQueued=filteredData.reduce((s,b)=>s+b.queued,0);
-  const totVna=filteredData.reduce((s,b)=>s+b.vna,0);
-  const avgPct=totVna>0?Math.round(totPassed/totVna*100):0;
-
-  document.getElementById('buyers-metrics').innerHTML=`
-    <div class="metric"><div class="metric-label">Аккаунтов выдано</div><div class="metric-value">${totAccounts.toLocaleString()}</div></div>
-    <div class="metric">
-      <div class="metric-label">Верификация</div>
-      <div class="metric-value" style="color:${verCol(avgPct)}">${avgPct}%</div>
-      <div class="metric-hint" style="margin-top:4px;">
-        из <b>${totVna.toLocaleString()}</b> дошедших до верификации
-        <div style="margin-top:4px;display:flex;justify-content:space-between;"><span>прошли</span><span style="font-weight:500;">${totPassed}</span></div>
-        <div style="display:flex;justify-content:space-between;"><span>на замену</span><span style="font-weight:500;">${totFailed}</span></div>
-        <div style="display:flex;justify-content:space-between;"><span>в очереди</span><span style="font-weight:500;">${totQueued}</span></div>
-        <div style="display:flex;justify-content:space-between;color:#bbb;"><span>ещё не верифицированы</span><span style="font-weight:500;">${totAccounts-totVna-totQueued}</span></div>
-      </div>
-    </div>
-    <div class="metric">
-      <div class="metric-label">На замену</div>
-      <div class="metric-value" style="color:#c02020">${totFailed}</div>
-      <div class="metric-hint" style="margin-top:4px;">${totVna>0?Math.round(totFailed/totVna*100):0}% от дошедших до верификации</div>
-    </div>`;
-  document.getElementById('buyer-cards').innerHTML=filteredData.map(b=>{
-    const t=b.total;
-    const pPass=t>0?Math.round(b.passed/t*100):0;
-    const pFail=t>0?Math.round(b.failed/t*100):0;
-    const pQueue=t>0?Math.round(b.queued/t*100):0;
-    const pOther=t>0?Math.round((b.others+b.no_status)/t*100):0;
-    const clr=verCol(b.success_pct);
-    const docRows=(b.by_doc||[]).map(d=>{
-      const dc=verCol(d.success_pct);
-      const banEntries=Object.entries(d.bans||{});
-      const banTip=banEntries.length?banEntries.map(([k,v])=>k+': '+v).join(' | '):'нет данных';
-      const failedTag=d.failed>0?`<span class="stag stag-fail" style="cursor:default;position:relative;" title="${banTip}">замена: ${d.failed} ⓘ</span>`:'';
-      return `<div class="buyer-doc-row">
-        <span class="buyer-doc-name">${d.doc}</span>
-        <span style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-          ${d.passed>0?`<span class="stag stag-pass">прошли: ${d.passed}</span>`:''}
-          ${failedTag}
-          ${d.queued>0?`<span class="stag stag-queue">очередь: ${d.queued}</span>`:''}
-          ${d.vna>0?`<span style="font-weight:600;color:${dc};min-width:40px;text-align:right;">${d.success_pct}%</span>`:''}
-        </span>
-      </div>`;
-    }).join('');
-    const gmailRows=(b.by_gmail||[]).filter(g=>g.vna>0).slice(0,5).map(g=>{
-      const gc=verCol(g.success_pct);
-      return `<div class="buyer-doc-row">
-        <span class="buyer-doc-name" style="font-weight:500;">${g.gmail}</span>
-        <span style="display:flex;align-items:center;gap:8px;">
-          <span style="font-size:11px;color:#aaa;">${g.vna} акк.</span>
-          <span style="font-weight:600;color:${gc};">${g.success_pct}%</span>
-        </span>
-      </div>`;
-    }).join('');
-    return `<div class="buyer-card">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px;">
-        <div class="buyer-name">${b.buyer}</div>
-        <span class="buyer-pct" style="color:${clr}">${b.success_pct}%</span>
-      </div>
-      <div class="buyer-total">${t} аккаунтов выдано</div>
-      <div class="buyer-stack">
-        <div style="width:${pPass}%;background:#3a7d15;"></div>
-        <div style="width:${pFail}%;background:#c02020;"></div>
-        <div style="width:${pQueue}%;background:#185FA5;"></div>
-        <div style="width:${pOther}%;background:#534AB7;"></div>
-      </div>
-      <div class="buyer-tags">
-        ${b.passed>0?`<span class="stag stag-pass">прошли: ${b.passed}</span>`:''}
-        ${b.failed>0?`<span class="stag stag-fail">на замену/заменен: ${b.failed}</span>`:''}
-        ${(b.zamena_count||0)>0?`<span class="stag stag-other" title="Аккаунты с тегом zamena — замена выполнена">🔄 замен получено: ${b.zamena_count}</span>`:''}
-        ${b.queued>0?`<span class="stag stag-queue">в очереди: ${b.queued}</span>`:''}
-        ${b.others>0?`<span class="stag stag-other">прочие: ${b.others}</span>`:''}
-      </div>
-      ${docRows?`<div class="divider"></div>${docRows}`:''}
-      ${gmailRows?`
-        <div style="margin-top:10px;">
-          <div style="font-size:11px;font-weight:600;color:#aaa;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;">Лучшие почты для заказа</div>
-          ${gmailRows}
-        </div>`:''}
-    </div>`;
-  }).join('');
-}
-
-// TABS
-function switchTab(name){
-  document.querySelectorAll('.tab-btn').forEach((b,i)=>{
-    b.classList.toggle('active',['purchases','buyers'][i]===name);
-  });
-  document.getElementById('tab-purchases').classList.toggle('active',name==='purchases');
-  document.getElementById('tab-buyers').classList.toggle('active',name==='buyers');
-  if(name==='buyers') renderBuyers();
-}
-
-renderBuyers();
-</script>
-
-<style id="dark-theme" disabled>
-  body { background: #1a1a1a !important; color: #e0e0e0 !important; }
-  .page-title { color: #f0f0f0 !important; }
-  .page-sub { color: #888 !important; }
-  .metric { background: #2a2a2a !important; border-color: #333 !important; }
-  .metric-label { color: #888 !important; }
-  .metric-value { color: #f0f0f0 !important; }
-  .metric-hint { color: #666 !important; }
-  .controls { background: #242424 !important; border-color: #333 !important; }
-  .controls label { color: #888 !important; }
-  .controls select, .controls input { background: #2a2a2a !important; color: #e0e0e0 !important; border-color: #444 !important; }
-  .section-label { color: #666 !important; }
-  .card { background: #242424 !important; border-color: #333 !important; }
-  .card-id { color: #f0f0f0 !important; }
-  .card-gmail { color: #888 !important; }
-  .farm-label, .stage-label { color: #666 !important; }
-  .farm-counts, .stage-count { color: #888 !important; }
-  .bar-bg, .stack-bar { background: #333 !important; }
-  .divider { background: #333 !important; }
-  .doc-name { color: #e0e0e0 !important; }
-  .doc-no-vna { color: #555 !important; }
-  .comment-label { color: #666 !important; }
-  .comment-input { background: #2a2a2a !important; color: #e0e0e0 !important; border-color: #444 !important; }
-  .comment-input::placeholder { color: #555 !important; }
-  .heatmap-section { background: #242424 !important; border-color: #333 !important; }
-  .heatmap-table th { color: #666 !important; border-color: #333 !important; }
-  .heatmap-table td { border-color: #333 !important; }
-  .page-header { border-color: #333 !important; }
-  .badge-green { background: #1a3a1a !important; color: #6dbf6d !important; }
-  .badge-amber { background: #3a2a0a !important; color: #d4a056 !important; }
-  .badge-red { background: #3a1a1a !important; color: #d47070 !important; }
-  .stag-pass { background: #1a3a1a !important; color: #6dbf6d !important; }
-  .stag-fail { background: #3a1a1a !important; color: #d47070 !important; }
-  .stag-queue { background: #1a2a3a !important; color: #6aafd4 !important; }
-  .stag-other { background: #2a1a3a !important; color: #a888d4 !important; }
-  .loss-tag { background: #3a1a1a !important; color: #d47070 !important; }
-  .legend { color: #666 !important; }
-  .hm-cell .tooltip { background: #111 !important; color: #e0e0e0 !important; }
-  .buyer-card { background: #242424 !important; border-color: #333 !important; }
-  .buyer-name { color: #f0f0f0 !important; }
-  .buyer-total { color: #888 !important; }
-  .buyer-stack { background: #333 !important; }
-  .buyer-doc-row { border-color: #333 !important; }
-  .buyer-doc-name { color: #e0e0e0 !important; }
-  .tab-btn { color: #888 !important; }
-  .tab-btn.active { color: #f0f0f0 !important; border-bottom-color: #f0f0f0 !important; }
-  .tabs { border-color: #333 !important; }
-</style>
-<button id="theme-toggle" onclick="toggleTheme()" style="position:fixed;top:16px;right:16px;z-index:999;background:#1a1a1a;color:#fff;border:1px solid #444;border-radius:20px;padding:6px 14px;font-size:13px;font-family:inherit;cursor:pointer;">Тёмная</button>
-<script>
-function toggleTheme(){const s=document.getElementById('dark-theme');const b=document.getElementById('theme-toggle');const d=!s.disabled;s.disabled=d;b.textContent=d?'Тёмная':'Светлая';b.style.background=d?'#1a1a1a':'#fff';b.style.color=d?'#fff':'#1a1a1a';try{localStorage.setItem('theme',d?'light':'dark')}catch(e){}}
-try{if(localStorage.getItem('theme')==='dark'){document.getElementById('dark-theme').disabled=false;const b=document.getElementById('theme-toggle');b.textContent='Светлая';b.style.background='#fff';b.style.color='#1a1a1a';}}catch(e){}
-</script>
-
-<div id="hm-popup" class="hm-popup">
-  <div class="hm-popup-title" id="hm-popup-title"></div>
-  <div id="hm-popup-body"></div>
-</div>
-
-<script>
-let popupTimeout;
-function showHmPopup(e, title, rows) {
-  const popup = document.getElementById('hm-popup');
-  const t = document.getElementById('hm-popup-title');
-  const b = document.getElementById('hm-popup-body');
-  t.textContent = title;
-  b.innerHTML = rows.map(r => `<div class="hm-popup-row"><span class="hm-popup-label">${r[0]}</span><span class="hm-popup-val">${r[1]}</span></div>`).join('');
-
-  // Position
-  const rect = e.target.getBoundingClientRect();
-  const scrollY = window.scrollY || document.documentElement.scrollTop;
-  const scrollX = window.scrollX || document.documentElement.scrollLeft;
-  popup.style.top = (rect.bottom + scrollY + 6) + 'px';
-  let left = rect.left + scrollX;
-  popup.classList.add('visible');
-  // Keep in viewport
-  const pw = popup.offsetWidth;
-  if (left + pw > window.innerWidth - 16) left = window.innerWidth - pw - 16 + scrollX;
-  popup.style.left = left + 'px';
-
-  clearTimeout(popupTimeout);
-}
-function hideHmPopup() {
-  popupTimeout = setTimeout(() => {
-    document.getElementById('hm-popup').classList.remove('visible');
-  }, 200);
-}
-document.addEventListener('click', function(e) {
-  if (!e.target.closest('.hm-cell') && !e.target.closest('#hm-popup')) {
-    document.getElementById('hm-popup').classList.remove('visible');
-  }
-});
-</script>
+<div class="footer">RoseAhmar · stats-ban</div>
 
 </body>
 </html>
