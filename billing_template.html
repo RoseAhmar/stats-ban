@@ -20,8 +20,14 @@
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 14px; }
 
+  .page-wrap {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 24px;
+  }
+
   .top-bar {
-    padding: 16px 24px;
+    padding: 16px 0;
     border-bottom: 1px solid var(--border);
     display: flex;
     align-items: center;
@@ -44,7 +50,7 @@
   .page-subtitle { font-size: 12px; color: var(--muted); margin-top: 2px; }
 
   .period-bar {
-    padding: 16px 24px;
+    padding: 16px 0;
     display: flex;
     gap: 8px;
     align-items: center;
@@ -63,7 +69,7 @@
   .period-btn:hover { color: var(--text); border-color: var(--muted); }
   .period-btn.active { background: var(--card2); color: var(--text); border-color: #555; font-weight: 600; }
 
-  .main { padding: 20px 24px; max-width: 1200px; }
+  .main { padding: 20px 0; }
 
   .summary-grid {
     display: grid;
@@ -234,6 +240,7 @@
 </style>
 </head>
 <body>
+<div class="page-wrap">
 
 <div class="top-bar">
   <a class="back-link" href="index.html">← Главное меню</a>
@@ -263,6 +270,8 @@
     <div id="day-detail"></div>
   </div>
 </div>
+
+</div><!-- /page-wrap -->
 
 <script>
 const BILLING_MAR = [];
