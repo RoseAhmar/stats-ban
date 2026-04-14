@@ -275,12 +275,17 @@
   <div class="summary-grid" id="summary"></div>
   <div class="view-tabs">
     <button class="view-tab active" id="tab-buyers" onclick="setView('buyers')">По баерам</button>
+    <button class="view-tab" id="tab-weekly" onclick="setView('weekly')">По неделям</button>
     <button class="view-tab" id="tab-daily" onclick="setView('daily')">По дням</button>
     <button class="view-tab" id="tab-mbteam" onclick="setView('mbteam')">По MB Team</button>
   </div>
   <div id="view-buyers">
     <div class="section-label">Карточки баеров</div>
     <div class="buyers-grid" id="buyers"></div>
+  </div>
+  <div id="view-weekly" style="display:none">
+    <div class="dates-list" id="weeks-list"></div>
+    <div id="week-detail"></div>
   </div>
   <div id="view-daily" style="display:none">
     <div class="dates-list" id="dates-list"></div>
@@ -421,10 +426,181 @@ function setView(v) {
   document.querySelectorAll('.view-tab').forEach(b => b.classList.remove('active'));
   document.getElementById('tab-' + v).classList.add('active');
   document.getElementById('view-buyers').style.display = v === 'buyers' ? '' : 'none';
+  document.getElementById('view-weekly').style.display = v === 'weekly' ? '' : 'none';
   document.getElementById('view-daily').style.display = v === 'daily' ? '' : 'none';
   document.getElementById('view-mbteam').style.display = v === 'mbteam' ? '' : 'none';
   if (v === 'daily') renderDaily();
+  if (v === 'weekly') renderWeekly();
   if (v === 'mbteam') renderMBTeam();
+}
+
+// ── WEEKLY VIEW ───────────────────────────────────────────────────────────────
+
+// Returns Monday of the ISO week for a "YYYY-MM-DD" string
+function isoWeekMonday(dateStr) {
+  const d = new Date(dateStr + 'T12:00:00');
+  const day = d.getDay() || 7; // 1=Mon … 7=Sun
+  d.setDate(d.getDate() - day + 1);
+  return d.toISOString().slice(0, 10);
+}
+
+function addDays(dateStr, n) {
+  const d = new Date(dateStr + 'T12:00:00');
+  d.setDate(d.getDate() + n);
+  return d.toISOString().slice(0, 10);
+}
+
+// Returns all dates (YYYY-MM-DD) in [monStr … monStr+6]
+function weekDates(monStr) {
+  const out = [];
+  for (let i = 0; i < 7; i++) out.push(addDays(monStr, i));
+  return out;
+}
+
+// "2026-04-06" → "6"
+function dayNum(dateStr) { return parseInt(dateStr.slice(8)); }
+
+// Pill label: "6–12 апр." or "1–5 апр."
+function weekLabel(monStr, allDates) {
+  const datesInWeek = weekDates(monStr).filter(d => allDates.has(d));
+  if (!datesInWeek.length) return '';
+  const first = datesInWeek[0], last = datesInWeek[datesInWeek.length - 1];
+  const mm = first.slice(5, 7);
+  const shortMonth = { '01':'янв','02':'фев','03':'мар','04':'апр','05':'май',
+    '06':'июн','07':'июл','08':'авг','09':'сен','10':'окт','11':'ноя','12':'дек' };
+  const mon = shortMonth[mm] || mm;
+  if (first === last) return `${dayNum(first)} ${mon}.`;
+  return `${dayNum(first)}–${dayNum(last)} ${mon}.`;
+}
+
+let activeWeek = null;
+
+function renderWeekly() {
+  const data = activePeriod === 'mar' ? BILLING_MAR : BILLING_APR;
+
+  // Collect all dates present in data
+  const dateSet = new Set();
+  data.forEach(b => b.daily.forEach(d => dateSet.add(d.date)));
+  const allDates = Array.from(dateSet).sort();
+
+  // Group dates by their ISO-week Monday
+  const weekSet = new Set(allDates.map(isoWeekMonday));
+  const weeks = Array.from(weekSet).sort();
+
+  // Default to last week
+  if (!activeWeek || !weeks.includes(activeWeek)) {
+    activeWeek = weeks[weeks.length - 1] || null;
+  }
+
+  document.getElementById('weeks-list').innerHTML = weeks.map(w =>
+    `<div class="date-pill ${w === activeWeek ? 'active' : ''}" onclick="selectWeek('${w}')">${weekLabel(w, dateSet)}</div>`
+  ).join('');
+
+  renderWeekDetail(data, activeWeek, dateSet);
+}
+
+function selectWeek(mon) {
+  activeWeek = mon;
+  renderWeekly();
+}
+
+function renderWeekDetail(data, monStr, dateSet) {
+  const el = document.getElementById('week-detail');
+  if (!monStr) { el.innerHTML = ''; return; }
+
+  const daysInWeek = weekDates(monStr).filter(d => dateSet.has(d));
+  if (!daysInWeek.length) { el.innerHTML = `<div style="color:var(--muted);padding:20px 0">Нет данных за эту неделю</div>`; return; }
+
+  // Aggregate per buyer for this week
+  const rows = [];
+  data.forEach(b => {
+    const zamDailyMap = {};
+    (b.zamena_daily || []).forEach(z => { zamDailyMap[z.date] = z.count; });
+
+    let total = 0, zamenas = 0;
+    daysInWeek.forEach(d => {
+      const entry = b.daily.find(x => x.date === d);
+      if (entry) {
+        total += entry.count;
+        zamenas += zamDailyMap[d] || 0;
+      }
+    });
+    if (total === 0) return;
+    const paid = total - zamenas;
+    rows.push({ buyer: b.buyer, total, zamenas, paid });
+  });
+
+  if (!rows.length) { el.innerHTML = `<div style="color:var(--muted);padding:20px 0">Нет данных за эту неделю</div>`; return; }
+
+  rows.sort((a, b) => b.total - a.total);
+  const totAcc  = rows.reduce((s, r) => s + r.total,   0);
+  const totZam  = rows.reduce((s, r) => s + r.zamenas, 0);
+  const totPaid = rows.reduce((s, r) => s + r.paid,    0);
+  const label   = weekLabel(monStr, new Set(daysInWeek));
+
+  // Day-by-day breakdown table per buyer (collapsible would be complex; show flat)
+  // Also show a mini day breakdown below the buyer table
+  const dayBreakdownRows = daysInWeek.map(d => {
+    let dayTotal = 0, dayZam = 0;
+    data.forEach(b => {
+      const entry = b.daily.find(x => x.date === d);
+      if (entry) {
+        dayTotal += entry.count;
+        const zm = (b.zamena_daily || []).find(z => z.date === d);
+        dayZam += zm ? zm.count : 0;
+      }
+    });
+    if (dayTotal === 0) return '';
+    const dayPaid = dayTotal - dayZam;
+    const countCell = dayZam > 0
+      ? `${dayPaid} акк. + <span style="color:var(--text)">${dayZam} замен</span> <span style="color:var(--muted)">(${dayTotal})</span>`
+      : `${dayTotal}`;
+    return `<tr>
+      <td>${fmtDate(d)}</td>
+      <td style="text-align:right;font-weight:600">${countCell}</td>
+      <td style="text-align:right" class="day-amount">${fmtMoney(dayPaid * PRICE_PER_ACCOUNT)}</td>
+    </tr>`;
+  }).filter(Boolean).join('');
+
+  el.innerHTML = `
+    <table class="day-table" style="margin-bottom:16px">
+      <thead>
+        <tr>
+          <th>Баер</th>
+          <th style="text-align:right">Аккаунтов</th>
+          <th style="text-align:right">Сумма (×$${PRICE_PER_ACCOUNT})</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${rows.map(r => {
+          const countCell = r.zamenas > 0
+            ? `${r.paid} акк. + <span style="color:var(--text)">${r.zamenas} замен</span> <span style="color:var(--muted)">(${r.total})</span>`
+            : `${r.total}`;
+          return `<tr>
+            <td>${r.buyer}</td>
+            <td style="text-align:right;font-weight:600">${countCell}</td>
+            <td style="text-align:right" class="day-amount">${fmtMoney(r.paid * PRICE_PER_ACCOUNT)}</td>
+          </tr>`;
+        }).join('')}
+        <tr class="day-total-row">
+          <td>Итого за ${label}</td>
+          <td style="text-align:right">${totZam > 0 ? `${totPaid} + <span style="color:var(--text)">${totZam} замен</span> (${totAcc})` : totAcc}</td>
+          <td style="text-align:right" class="day-amount">${fmtMoney(totPaid * PRICE_PER_ACCOUNT)}</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="section-label" style="margin-bottom:10px">По дням недели</div>
+    <table class="day-table">
+      <thead>
+        <tr>
+          <th>День</th>
+          <th style="text-align:right">Аккаунтов</th>
+          <th style="text-align:right">Сумма</th>
+        </tr>
+      </thead>
+      <tbody>${dayBreakdownRows}</tbody>
+    </table>`;
 }
 
 function renderMBTeam() {
