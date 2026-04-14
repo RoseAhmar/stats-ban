@@ -237,6 +237,22 @@
   .day-table tr:hover td { background: #2a2826; }
   .day-total-row td { font-weight: 700; background: var(--card2); border-top: 1px solid var(--border); color: var(--text); }
   .day-amount { color: var(--green); font-weight: 600; }
+
+  /* MB TEAM VIEW */
+  .team-section { margin-bottom: 28px; }
+  .team-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 16px;
+    background: var(--card2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin-bottom: 14px;
+  }
+  .team-header-name { font-size: 14px; font-weight: 700; color: var(--accent); }
+  .team-header-stats { display: flex; gap: 20px; font-size: 12px; color: var(--muted); }
+  .team-header-stats span { color: var(--text); font-weight: 600; }
 </style>
 </head>
 <body>
@@ -260,6 +276,7 @@
   <div class="view-tabs">
     <button class="view-tab active" id="tab-buyers" onclick="setView('buyers')">По баерам</button>
     <button class="view-tab" id="tab-daily" onclick="setView('daily')">По дням</button>
+    <button class="view-tab" id="tab-mbteam" onclick="setView('mbteam')">По MB Team</button>
   </div>
   <div id="view-buyers">
     <div class="section-label">Карточки баеров</div>
@@ -268,6 +285,9 @@
   <div id="view-daily" style="display:none">
     <div class="dates-list" id="dates-list"></div>
     <div id="day-detail"></div>
+  </div>
+  <div id="view-mbteam" style="display:none">
+    <div id="mbteam-content"></div>
   </div>
 </div>
 
@@ -402,7 +422,98 @@ function setView(v) {
   document.getElementById('tab-' + v).classList.add('active');
   document.getElementById('view-buyers').style.display = v === 'buyers' ? '' : 'none';
   document.getElementById('view-daily').style.display = v === 'daily' ? '' : 'none';
+  document.getElementById('view-mbteam').style.display = v === 'mbteam' ? '' : 'none';
   if (v === 'daily') renderDaily();
+  if (v === 'mbteam') renderMBTeam();
+}
+
+function renderMBTeam() {
+  const data = activePeriod === 'mar' ? BILLING_MAR : BILLING_APR;
+
+  // Group buyers by mb_team
+  const teamMap = {};
+  data.forEach(b => {
+    const team = b.mb_team || '—';
+    if (!teamMap[team]) teamMap[team] = [];
+    teamMap[team].push(b);
+  });
+
+  const teamNames = Object.keys(teamMap).sort((a, b) => {
+    if (a === '—') return 1;
+    if (b === '—') return -1;
+    return a.localeCompare(b);
+  });
+
+  document.getElementById('mbteam-content').innerHTML = teamNames.map(team => {
+    const buyers = teamMap[team];
+    const teamAcc = buyers.reduce((s, b) => s + b.total_accounts, 0);
+    const teamZam = buyers.reduce((s, b) => s + b.zamenas, 0);
+    const teamPaid = buyers.reduce((s, b) => s + b.paid, 0);
+    const teamAmt = buyers.reduce((s, b) => s + b.amount, 0);
+
+    const cards = buyers.map(b => {
+      const zamDailyMap = {};
+      (b.zamena_daily || []).forEach(z => { zamDailyMap[z.date] = z.count; });
+      const dailyRows = b.daily.map(d => {
+        const z = zamDailyMap[d.date] || 0;
+        const countCell = z > 0
+          ? `${d.count - z} акк. + <span style="color:var(--text)">${z} замен</span> <span style="color:var(--muted)">(${d.count})</span>`
+          : `${d.count} акк.`;
+        return `<tr>
+          <td class="date-cell">${fmtDate(d.date)}</td>
+          <td class="count-cell">${countCell}</td>
+        </tr>`;
+      }).join('');
+
+      const zamenaLine = b.zamenas > 0
+        ? `<div class="total-row">
+             <span>из них замены <span class="zamena-badge">${b.zamenas}</span> — бесплатно</span>
+             <span style="color:var(--green)">$0</span>
+           </div>`
+        : '';
+
+      return `
+        <div class="buyer-card">
+          <div class="buyer-header">
+            <div><div class="buyer-name">${b.buyer}</div></div>
+            <div style="text-align:right">
+              <div class="buyer-amount">${fmtMoney(b.amount)}</div>
+              <div class="buyer-amount-label">${b.paid} × $${PRICE_PER_ACCOUNT}</div>
+            </div>
+          </div>
+          <div class="buyer-body">
+            <div class="daily-scroll">
+              <table class="daily-table">
+                <thead><tr><th>Дата выдачи</th><th style="text-align:right">Аккаунты</th></tr></thead>
+                <tbody>${dailyRows}</tbody>
+              </table>
+            </div>
+            <div class="buyer-totals">
+              <div class="total-row"><span>Всего выдано</span><span>${b.total_accounts} акк.</span></div>
+              ${zamenaLine}
+              <div class="total-row final">
+                <span>Итого к оплате</span>
+                <span><strong>${b.paid}</strong> × $${PRICE_PER_ACCOUNT} = <span style="color:var(--green)">${fmtMoney(b.amount)}</span></span>
+              </div>
+            </div>
+          </div>
+        </div>`;
+    }).join('');
+
+    return `
+      <div class="team-section">
+        <div class="team-header">
+          <div class="team-header-name">${team}</div>
+          <div class="team-header-stats">
+            <div>Выдано: <span>${teamAcc.toLocaleString()}</span></div>
+            ${teamZam > 0 ? `<div>Замен: <span>${teamZam.toLocaleString()}</span></div>` : ''}
+            <div>К оплате: <span>${teamPaid.toLocaleString()}</span></div>
+            <div>Сумма: <span style="color:var(--green)">${fmtMoney(teamAmt)}</span></div>
+          </div>
+        </div>
+        <div class="buyers-grid">${cards}</div>
+      </div>`;
+  }).join('');
 }
 
 function renderDaily() {

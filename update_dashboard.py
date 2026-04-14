@@ -26,6 +26,7 @@ FIELD_ID_BUY = "ID_buy"
 FIELD_BUYER = "Баер (для кого)"
 FIELD_DATE_ZAMENA = "Дата 2-го логина"
 FIELD_DATE_VYDACHI = "Дата выдачи"
+FIELD_MB_TEAM = "MB Team"
 
 # ─── СТАТУСЫ ─────────────────────────────────────────────────
 VALID_INTERNAL = ["Выдан"]
@@ -179,6 +180,7 @@ def parse_tasks(tasks):
             "type_ban": get_field(t, FIELD_TYPE_BAN),
             "id_buy": get_field(t, FIELD_ID_BUY),
             "buyer": get_field(t, FIELD_BUYER),
+            "mb_team": get_field(t, FIELD_MB_TEAM),
             "has_zamena_tag": any(tag.get("name", "").lower() == "zamena" for tag in t.get("tags", [])),
             "date_zamena_ms": int(get_field_raw_date(t, FIELD_DATE_ZAMENA) or 0),
             "date_vydachi_ms": int(get_field_raw_date(t, FIELD_DATE_VYDACHI) or 0),
@@ -474,8 +476,13 @@ def compute_buyers_data(rows, date_start_ms=None, date_end_ms=None):
         # Сортируем по % успеха (лучшие первыми)
         gmail_stats.sort(key=lambda x: x["success_pct"], reverse=True)
 
+        # MB Team — берём самое частое значение среди аккаунтов баера
+        mb_teams = [r.get("mb_team") for r in group if r.get("mb_team")]
+        mb_team = max(set(mb_teams), key=mb_teams.count) if mb_teams else None
+
         buyers.append({
             "buyer": buyer,
+            "mb_team": mb_team,
             "total": len(group),
             "passed": passed,
             "failed": na_zam,
@@ -608,14 +615,22 @@ def compute_billing_data(rows, date_start_ms, date_end_ms, price_per_account=16)
             zamena_daily_by_buyer[buyer] = {}
         zamena_daily_by_buyer[buyer][date_str] = zamena_daily_by_buyer[buyer].get(date_str, 0) + 1
 
+    # MB Team по баеру (самый частый)
+    mb_team_by_buyer = {}
+    for r in rows:
+        buyer = r.get("buyer")
+        team = r.get("mb_team")
+        if buyer and team:
+            mb_team_by_buyer.setdefault(buyer, []).append(team)
+
     all_buyers = set(buyer_daily.keys()) | set(zamena_by_buyer.keys())
     result = []
     for buyer in sorted(all_buyers):
         daily = buyer_daily.get(buyer, {})
         merged_daily = daily
-        total_accounts = sum(merged_daily.values())   # всего выдано по date_vydachi
-        zamenas = zamena_by_buyer.get(buyer, 0)       # из них замены по date_zamena
-        paid = total_accounts - zamenas                # платные = total - замены
+        total_accounts = sum(merged_daily.values())
+        zamenas = zamena_by_buyer.get(buyer, 0)
+        paid = total_accounts - zamenas
         total = total_accounts
         amount = paid * price_per_account
         daily_list = sorted(
@@ -627,8 +642,11 @@ def compute_billing_data(rows, date_start_ms, date_end_ms, price_per_account=16)
             [{"date": d, "count": c} for d, c in zamena_daily_dict.items()],
             key=lambda x: x["date"]
         )
+        teams = mb_team_by_buyer.get(buyer, [])
+        mb_team = max(set(teams), key=teams.count) if teams else None
         result.append({
             "buyer": buyer,
+            "mb_team": mb_team,
             "daily": daily_list,
             "zamena_daily": zamena_daily_list,
             "total_accounts": total_accounts,
