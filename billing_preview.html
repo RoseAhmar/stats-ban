@@ -262,7 +262,7 @@
   <a class="back-link" href="index.html">← Главное меню</a>
   <div>
     <div class="page-title">Расчёт с баерами</div>
-    <div class="page-subtitle">Обновлено: 14.04.2026 12:41</div>
+    <div class="page-subtitle">Обновлено: 14.04.2026 13:01</div>
   </div>
 </div>
 
@@ -292,6 +292,7 @@
     <div id="day-detail"></div>
   </div>
   <div id="view-mbteam" style="display:none">
+    <div class="dates-list" id="mbteam-weeks-list"></div>
     <div id="mbteam-content"></div>
   </div>
 </div>
@@ -323,6 +324,8 @@ let activePeriod = 'mar';
 
 function setPeriod(p) {
   activePeriod = p;
+  activeWeek = null;
+  activeMBTeamWeek = null;
   document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('btn-' + p).classList.add('active');
   render();
@@ -603,8 +606,31 @@ function renderWeekDetail(data, monStr, dateSet) {
     </table>`;
 }
 
+let activeMBTeamWeek = null; // null = все недели
+
 function renderMBTeam() {
   const data = activePeriod === 'mar' ? BILLING_MAR : BILLING_APR;
+
+  // Collect all dates → compute weeks for pills
+  const dateSet = new Set();
+  data.forEach(b => b.daily.forEach(d => dateSet.add(d.date)));
+  const weekSet = new Set(Array.from(dateSet).map(isoWeekMonday));
+  const weeks = Array.from(weekSet).sort();
+
+  // Reset invalid week
+  if (activeMBTeamWeek && !weeks.includes(activeMBTeamWeek)) activeMBTeamWeek = null;
+
+  // Determine which dates are "active" (null = all)
+  const activeDates = activeMBTeamWeek
+    ? new Set(weekDates(activeMBTeamWeek).filter(d => dateSet.has(d)))
+    : dateSet;
+
+  // Render week pills
+  document.getElementById('mbteam-weeks-list').innerHTML =
+    `<div class="date-pill ${activeMBTeamWeek === null ? 'active' : ''}" onclick="selectMBTeamWeek(null)">Весь период</div>` +
+    weeks.map(w =>
+      `<div class="date-pill ${w === activeMBTeamWeek ? 'active' : ''}" onclick="selectMBTeamWeek('${w}')">${weekLabel(w, dateSet)}</div>`
+    ).join('');
 
   // Group buyers by mb_team
   const teamMap = {};
@@ -622,15 +648,29 @@ function renderMBTeam() {
 
   document.getElementById('mbteam-content').innerHTML = teamNames.map(team => {
     const buyers = teamMap[team];
-    const teamAcc = buyers.reduce((s, b) => s + b.total_accounts, 0);
-    const teamZam = buyers.reduce((s, b) => s + b.zamenas, 0);
-    const teamPaid = buyers.reduce((s, b) => s + b.paid, 0);
-    const teamAmt = buyers.reduce((s, b) => s + b.amount, 0);
+
+    // Build buyer cards with stats filtered to activeDates
+    let teamAcc = 0, teamZam = 0, teamPaid = 0, teamAmt = 0;
 
     const cards = buyers.map(b => {
       const zamDailyMap = {};
       (b.zamena_daily || []).forEach(z => { zamDailyMap[z.date] = z.count; });
-      const dailyRows = b.daily.map(d => {
+
+      // Filter daily rows to activeDates
+      const filteredDaily = b.daily.filter(d => activeDates.has(d.date));
+      if (!filteredDaily.length) return '';
+
+      const total   = filteredDaily.reduce((s, d) => s + d.count, 0);
+      const zamenas = filteredDaily.reduce((s, d) => s + (zamDailyMap[d.date] || 0), 0);
+      const paid    = total - zamenas;
+      const amount  = paid * PRICE_PER_ACCOUNT;
+
+      teamAcc  += total;
+      teamZam  += zamenas;
+      teamPaid += paid;
+      teamAmt  += amount;
+
+      const dailyRows = filteredDaily.map(d => {
         const z = zamDailyMap[d.date] || 0;
         const countCell = z > 0
           ? `${d.count - z} акк. + <span style="color:var(--text)">${z} замен</span> <span style="color:var(--muted)">(${d.count})</span>`
@@ -641,9 +681,9 @@ function renderMBTeam() {
         </tr>`;
       }).join('');
 
-      const zamenaLine = b.zamenas > 0
+      const zamenaLine = zamenas > 0
         ? `<div class="total-row">
-             <span>из них замены <span class="zamena-badge">${b.zamenas}</span> — бесплатно</span>
+             <span>из них замены <span class="zamena-badge">${zamenas}</span> — бесплатно</span>
              <span style="color:var(--green)">$0</span>
            </div>`
         : '';
@@ -653,8 +693,8 @@ function renderMBTeam() {
           <div class="buyer-header">
             <div><div class="buyer-name">${b.buyer}</div></div>
             <div style="text-align:right">
-              <div class="buyer-amount">${fmtMoney(b.amount)}</div>
-              <div class="buyer-amount-label">${b.paid} × $${PRICE_PER_ACCOUNT}</div>
+              <div class="buyer-amount">${fmtMoney(amount)}</div>
+              <div class="buyer-amount-label">${paid} × $${PRICE_PER_ACCOUNT}</div>
             </div>
           </div>
           <div class="buyer-body">
@@ -665,16 +705,18 @@ function renderMBTeam() {
               </table>
             </div>
             <div class="buyer-totals">
-              <div class="total-row"><span>Всего выдано</span><span>${b.total_accounts} акк.</span></div>
+              <div class="total-row"><span>Всего выдано</span><span>${total} акк.</span></div>
               ${zamenaLine}
               <div class="total-row final">
                 <span>Итого к оплате</span>
-                <span><strong>${b.paid}</strong> × $${PRICE_PER_ACCOUNT} = <span style="color:var(--green)">${fmtMoney(b.amount)}</span></span>
+                <span><strong>${paid}</strong> × $${PRICE_PER_ACCOUNT} = <span style="color:var(--green)">${fmtMoney(amount)}</span></span>
               </div>
             </div>
           </div>
         </div>`;
-    }).join('');
+    }).filter(Boolean).join('');
+
+    if (!cards) return ''; // skip team if no buyers have data in this week
 
     return `
       <div class="team-section">
@@ -689,7 +731,12 @@ function renderMBTeam() {
         </div>
         <div class="buyers-grid">${cards}</div>
       </div>`;
-  }).join('');
+  }).filter(Boolean).join('');
+}
+
+function selectMBTeamWeek(mon) {
+  activeMBTeamWeek = mon;
+  renderMBTeam();
 }
 
 function renderDaily() {
