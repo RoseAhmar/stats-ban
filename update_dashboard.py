@@ -377,11 +377,12 @@ def compute_buyers_data(rows, date_start_ms=None, date_end_ms=None):
         date_end_ms = int(datetime.now().timestamp() * 1000)
 
     # Zamena counts по дате замены (date_zamena_ms), независимо от даты создания
+    # Если date_zamena_ms пустой — берём date_vydachi_ms (аккаунт выдан как замена)
     zamena_by_buyer = {}
     for r in rows:
         if not r.get("has_zamena_tag"):
             continue
-        dz = int(r.get("date_zamena_ms") or 0)
+        dz = int(r.get("date_zamena_ms") or 0) or int(r.get("date_vydachi_ms") or 0)
         if not dz or not (date_start_ms <= dz <= date_end_ms):
             continue
         buyer = r.get("buyer")
@@ -595,12 +596,13 @@ def compute_billing_data(rows, date_start_ms, date_end_ms, price_per_account=16)
         buyer_daily[buyer][date_str] = buyer_daily[buyer].get(date_str, 0) + 1
 
     # Замены по date_zamena_ms — те что уже обработаны как замена в периоде
+    # Если date_zamena_ms пустой — берём date_vydachi_ms (аккаунт выдан как замена)
     zamena_by_buyer = {}
     zamena_daily_by_buyer = {}
     for r in rows:
         if not r.get("has_zamena_tag"):
             continue
-        dz = int(r.get("date_zamena_ms") or 0)
+        dz = int(r.get("date_zamena_ms") or 0) or int(r.get("date_vydachi_ms") or 0)
         if not dz or not (date_start_ms <= dz <= date_end_ms):
             continue
         buyer = r.get("buyer")
