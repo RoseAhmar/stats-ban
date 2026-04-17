@@ -238,6 +238,33 @@
   .day-total-row td { font-weight: 700; background: var(--card2); border-top: 1px solid var(--border); color: var(--text); }
   .day-amount { color: var(--green); font-weight: 600; }
 
+  /* COST STATS */
+  .cost-section {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 20px;
+    margin-bottom: 20px;
+  }
+  .cost-section-title {
+    font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase;
+    color: var(--muted); margin-bottom: 14px;
+  }
+  .cost-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+  }
+  .cost-card {
+    background: var(--card2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 16px;
+  }
+  .cost-card-label { font-size: 11px; color: var(--muted); margin-bottom: 6px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; }
+  .cost-card-value { font-size: 24px; font-weight: 700; color: var(--accent); }
+  .cost-card-sub { font-size: 11px; color: var(--muted); margin-top: 3px; }
+
   /* MB TEAM VIEW */
   .team-section { margin-bottom: 28px; }
   .team-header {
@@ -273,6 +300,26 @@
 
 <div class="main">
   <div class="summary-grid" id="summary"></div>
+  <div id="cost-section" style="display:none" class="cost-section">
+    <div class="cost-section-title">Средняя себестоимость аккаунта</div>
+    <div class="cost-grid">
+      <div class="cost-card">
+        <div class="cost-card-label">Платный</div>
+        <div class="cost-card-value" id="cost-paid">—</div>
+        <div class="cost-card-sub" id="cost-paid-sub"></div>
+      </div>
+      <div class="cost-card">
+        <div class="cost-card-label">Замена</div>
+        <div class="cost-card-value" id="cost-zamena">—</div>
+        <div class="cost-card-sub" id="cost-zamena-sub"></div>
+      </div>
+      <div class="cost-card">
+        <div class="cost-card-label">Общая</div>
+        <div class="cost-card-value" id="cost-total">—</div>
+        <div class="cost-card-sub" id="cost-total-sub"></div>
+      </div>
+    </div>
+  </div>
   <div class="view-tabs">
     <button class="view-tab active" id="tab-buyers" onclick="setView('buyers')">По баерам</button>
     <button class="view-tab" id="tab-weekly" onclick="setView('weekly')">По неделям</button>
@@ -302,6 +349,8 @@
 <script>
 const BILLING_MAR = [];
 const BILLING_APR = [];
+const COST_STATS_MAR = null;
+const COST_STATS_APR = null;
 const PRICE_PER_ACCOUNT = 16;
 
 const MONTHS_RU = {
@@ -329,6 +378,19 @@ function setPeriod(p) {
   document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('btn-' + p).classList.add('active');
   render();
+}
+
+function renderCostStats() {
+  const stats = activePeriod === 'mar' ? COST_STATS_MAR : COST_STATS_APR;
+  const section = document.getElementById('cost-section');
+  if (!stats) { section.style.display = 'none'; return; }
+  section.style.display = '';
+  document.getElementById('cost-paid').textContent   = stats.avg_paid   != null ? '$' + stats.avg_paid.toFixed(2)   : '—';
+  document.getElementById('cost-zamena').textContent = stats.avg_zamena != null ? '$' + stats.avg_zamena.toFixed(2) : '—';
+  document.getElementById('cost-total').textContent  = stats.avg_total  != null ? '$' + stats.avg_total.toFixed(2)  : '—';
+  document.getElementById('cost-paid-sub').textContent   = stats.count_paid   ? `${stats.count_paid} акк.`   : '';
+  document.getElementById('cost-zamena-sub').textContent = stats.count_zamena ? `${stats.count_zamena} акк.` : '';
+  document.getElementById('cost-total-sub').textContent  = stats.count_total  ? `${stats.count_total} акк.`  : '';
 }
 
 function render() {
@@ -362,6 +424,8 @@ function render() {
       <div class="sum-sub">к получению</div>
     </div>
   `;
+
+  renderCostStats();
 
   // Buyer cards
   document.getElementById('buyers').innerHTML = data.map(b => {

@@ -28,6 +28,74 @@ FIELD_DATE_ZAMENA = "Дата 2-го логина"
 FIELD_DATE_VYDACHI = "Дата выдачи"
 FIELD_MB_TEAM = "MB Team"
 
+# ─── СЕБЕСТОИМОСТЬ ───────────────────────────────────────────
+# Цена 1 почты по ID_Buy (обновлять каждый месяц)
+EMAIL_PRICE_BY_ID = {
+    # Март (куплены в марте, выданы в апреле)
+    5:  2.00, 6:  1.10, 7:  2.00, 8:  1.10, 9:  2.00,
+    10: 1.10, 11: 1.10, 12: 2.00, 13: 2.00, 14: 2.00,
+    15: 1.10, 16: 2.00, 17: 2.00, 18: 2.00, 19: 0.50,
+    20: 1.10, 21: 1.10, 22: 2.00, 23: 0.00, 24: 1.10,
+    25: 1.11, 26: 1.00, 27: 1.70, 28: 2.00, 29: 1.70,
+    30: 2.30, 31: 2.20, 32: 1.70, 33: 3.07, 34: 3.07,
+    35: 2.30, 36: 2.10, 37: 1.93, 38: 1.93, 39: 1.93,
+    40: 1.03, 41: 1.70, 42: 1.03, 43: 2.00, 44: 1.00,
+    45: 2.00, 46: 2.00, 47: 2.00, 48: 2.00, 49: 1.70,
+    50: 1.78,
+    # Апрель
+    52: 3.05, 53: 2.00, 54: 2.00, 55: 2.00, 56: 2.87,
+    57: 1.39, 58: 2.30, 59: 2.00, 60: 2.00, 61: 2.45,
+    62: 2.12, 63: 2.12, 64: 2.12, 65: 2.00, 66: 2.00,
+    67: 2.00, 68: 2.00, 69: 2.45, 70: 2.45, 71: 0.00,
+    72: 2.12, 73: 2.12, 74: 2.08, 75: 2.08, 76: 2.50,
+    77: 2.50, 78: 2.22, 79: 2.22, 80: 2.22, 81: 2.22,
+    82: 2.22, 83: 2.29, 84: 2.29, 85: 2.09, 86: 2.09,
+    87: 2.30, 88: 2.30, 89: 2.30, 90: 2.30, 91: 1.91,
+    92: 2.37, 93: 2.37, 94: 2.39, 95: 2.13, 96: 2.36,
+    97: 2.36, 98: 1.88,
+}
+DOC_PRICE_BY_SELLER = {'1-k1': 7.0, '3-lod': 5.5, 'Fels': 7.0, '6-artmak': 7.0, '': 7.0}
+PROXY_COST   = 1.77
+NO_ID_FLAT   = 9.0
+
+def compute_cost_stats(rows, date_start_ms, date_end_ms):
+    """Считает среднюю себестоимость платных / замен / общую."""
+    apr = [r for r in rows
+           if date_start_ms <= int(r.get("date_vydachi_ms") or 0) < date_end_ms
+           and r.get("internal_status") in VALID_INTERNAL]
+    if not apr:
+        return None
+    paid_costs, zamena_costs = [], []
+    for r in apr:
+        id_buy_raw = r.get("id_buy")
+        doc_seller = r.get("doc_seller") or ""
+        is_zamena  = r.get("has_zamena_tag", False)
+        if not id_buy_raw:
+            cost = NO_ID_FLAT
+        else:
+            try:
+                id_buy = int(id_buy_raw)
+            except Exception:
+                id_buy = None
+            if id_buy is None or id_buy not in EMAIL_PRICE_BY_ID:
+                cost = NO_ID_FLAT
+            else:
+                doc_key = doc_seller if doc_seller in DOC_PRICE_BY_SELLER else ""
+                cost = EMAIL_PRICE_BY_ID[id_buy] + DOC_PRICE_BY_SELLER[doc_key] + PROXY_COST
+        if is_zamena:
+            zamena_costs.append(cost)
+        else:
+            paid_costs.append(cost)
+    all_costs = paid_costs + zamena_costs
+    return {
+        "avg_paid":   round(sum(paid_costs)   / len(paid_costs),   2) if paid_costs   else None,
+        "avg_zamena": round(sum(zamena_costs) / len(zamena_costs), 2) if zamena_costs else None,
+        "avg_total":  round(sum(all_costs)    / len(all_costs),    2) if all_costs    else None,
+        "count_paid":   len(paid_costs),
+        "count_zamena": len(zamena_costs),
+        "count_total":  len(all_costs),
+    }
+
 # ─── СТАТУСЫ ─────────────────────────────────────────────────
 VALID_INTERNAL = ["Выдан"]
 INVALID_INTERNAL = [
@@ -658,7 +726,7 @@ def compute_billing_data(rows, date_start_ms, date_end_ms, price_per_account=16)
     result.sort(key=lambda x: x["total"], reverse=True)
     return result
 
-def update_billing_html(billing_mar, billing_apr, html_content):
+def update_billing_html(billing_mar, billing_apr, html_content, cost_mar=None, cost_apr=None):
     now = datetime.now().strftime("%d.%m.%Y %H:%M")
     updated = html_content.replace("<!-- UPDATE_DATE -->", now)
     updated = re.sub(r"const BILLING_MAR = \[.*?\];",
@@ -666,6 +734,12 @@ def update_billing_html(billing_mar, billing_apr, html_content):
                      updated, flags=re.DOTALL)
     updated = re.sub(r"const BILLING_APR = \[.*?\];",
                      "const BILLING_APR = " + json.dumps(billing_apr, ensure_ascii=False) + ";",
+                     updated, flags=re.DOTALL)
+    updated = re.sub(r"const COST_STATS_MAR = .*?;",
+                     "const COST_STATS_MAR = " + json.dumps(cost_mar, ensure_ascii=False) + ";",
+                     updated, flags=re.DOTALL)
+    updated = re.sub(r"const COST_STATS_APR = .*?;",
+                     "const COST_STATS_APR = " + json.dumps(cost_apr, ensure_ascii=False) + ";",
                      updated, flags=re.DOTALL)
     return updated
 
@@ -785,6 +859,9 @@ def main():
     billing_mar = compute_billing_data(rows, date_start_ms=DATE_START_MS, date_end_ms=APRIL_1_MS - 1)
     billing_apr = compute_billing_data(rows, date_start_ms=APRIL_1_MS, date_end_ms=int(datetime.now().timestamp() * 1000))
     print(f"Биллинг: март={len(billing_mar)} баеров, апрель={len(billing_apr)} баеров")
+    cost_mar = None  # цены за март пока не заданы
+    cost_apr = compute_cost_stats(rows, date_start_ms=APRIL_1_MS, date_end_ms=int(datetime.now().timestamp() * 1000))
+    print(f"Себестоимость апрель: платные=${cost_apr['avg_paid'] if cost_apr else '—'}, замены=${cost_apr['avg_zamena'] if cost_apr else '—'}")
 
     # 5. Генерируем дашборд HTML
     print("\nГенерирую дашборд HTML...")
@@ -803,7 +880,7 @@ def main():
     print("Генерирую биллинг HTML...")
     with open("billing_template.html", "r", encoding="utf-8") as f:
         billing_tmpl = f.read()
-    billing_html = update_billing_html(billing_mar, billing_apr, billing_tmpl)
+    billing_html = update_billing_html(billing_mar, billing_apr, billing_tmpl, cost_mar=cost_mar, cost_apr=cost_apr)
     with open("billing_preview.html", "w", encoding="utf-8") as f:
         f.write(billing_html)
     with open("billing.html", "w", encoding="utf-8") as f:
