@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Верификации</title>
+<style>
+  :root {
+    --bg: #1a1917;
+    --card: #232220;
+    --card2: #2a2826;
+    --border: #333230;
+    --text: #e8e6e2;
+    --muted: #888780;
+    --accent: #d4944a;
+    --green: #4caf7d;
+    --red: #e05c5c;
+    --blue: #5c9ce0;
+    --purple: #9b7fe8;
+    --yellow: #d4b44a;
+    --orange: #e07a2f;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 14px; }
+
+  .page-wrap { max-width: 1400px; margin: 0 auto; padding: 0 24px; }
+
+  .top-bar {
+    padding: 16px 0;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 16px;
+  }
+  .back-link {
+    color: var(--muted); text-decoration: none; font-size: 13px;
+    display: flex; align-items: center; gap: 6px;
+    padding: 6px 12px; border: 1px solid var(--border); border-radius: 6px;
+    transition: color .15s, border-color .15s;
+  }
+  .back-link:hover { color: var(--text); border-color: var(--muted); }
+  .page-title { font-size: 20px; font-weight: 700; }
+  .page-subtitle { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+  .period-bar {
+    padding: 16px 0; display: flex; gap: 8px; align-items: center;
+    border-bottom: 1px solid var(--border);
+  }
+  .period-btn {
+    padding: 6px 16px; border-radius: 6px; border: 1px solid var(--border);
+    background: transparent; color: var(--muted); font-size: 13px; cursor: pointer;
+    transition: all .15s;
+  }
+  .period-btn:hover { color: var(--text); border-color: var(--muted); }
+  .period-btn.active { background: var(--card2); color: var(--text); border-color: #555; font-weight: 600; }
+
+  .main { padding: 20px 0; }
+
+  /* ── Funnel ── */
+  .funnel-section { margin-bottom: 28px; }
+  .section-label {
+    font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase;
+    color: var(--muted); margin-bottom: 14px;
+  }
+  .funnel-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px;
+  }
+  .funnel-card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+    padding: 16px 18px; position: relative;
+  }
+  .funnel-card.highlight { border-color: var(--accent); }
+  .funnel-label { font-size: 11px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
+  .funnel-value { font-size: 32px; font-weight: 700; }
+  .funnel-pct { font-size: 12px; color: var(--muted); margin-top: 4px; }
+  .funnel-value.green { color: var(--green); }
+  .funnel-value.red   { color: var(--red); }
+  .funnel-value.blue  { color: var(--blue); }
+
+  /* ── Outcomes ── */
+  .outcomes-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px;
+    margin-bottom: 28px;
+  }
+  .outcome-card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 8px;
+    padding: 14px 16px;
+  }
+  .outcome-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
+  .outcome-name { font-size: 12px; color: var(--muted); margin-bottom: 8px; }
+  .outcome-val { font-size: 24px; font-weight: 700; }
+  .outcome-pct { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+  /* ── Tables ── */
+  .table-section { margin-bottom: 28px; }
+  .table-wrap { overflow-x: auto; }
+  table {
+    width: 100%; border-collapse: collapse; font-size: 13px;
+  }
+  th {
+    text-align: left; padding: 8px 12px; font-size: 11px; font-weight: 600;
+    letter-spacing: .05em; text-transform: uppercase; color: var(--muted);
+    border-bottom: 1px solid var(--border); white-space: nowrap;
+  }
+  th.r, td.r { text-align: right; }
+  td {
+    padding: 9px 12px; border-bottom: 1px solid #282624;
+  }
+  tr:hover td { background: var(--card2); }
+  tr:last-child td { border-bottom: none; }
+
+  .badge {
+    display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600;
+  }
+  .badge-green { background: rgba(76,175,125,.15); color: var(--green); }
+  .badge-red   { background: rgba(224,92,92,.15);  color: var(--red); }
+  .badge-blue  { background: rgba(92,156,224,.15); color: var(--blue); }
+  .badge-muted { background: rgba(136,135,128,.1); color: var(--muted); }
+  .badge-purple { background: rgba(155,127,232,.15); color: var(--purple); }
+  .badge-yellow { background: rgba(212,180,74,.15);  color: var(--yellow); }
+
+  .pct-bar {
+    display: flex; align-items: center; gap: 8px;
+  }
+  .bar-outer {
+    flex: 1; height: 6px; background: var(--card2); border-radius: 3px; min-width: 60px;
+  }
+  .bar-inner { height: 100%; border-radius: 3px; }
+  .bar-green { background: var(--green); }
+  .bar-red   { background: var(--red); }
+  .bar-blue  { background: var(--blue); }
+  .pct-num { font-size: 12px; color: var(--muted); min-width: 36px; text-align: right; }
+
+  /* ── Weekly ── */
+  .week-row-total { font-weight: 600; }
+
+  /* ── Expandable rows ── */
+  .expand-btn {
+    background: none; border: none; color: var(--muted); cursor: pointer; font-size: 12px;
+    padding: 2px 6px; border-radius: 4px; transition: color .15s;
+  }
+  .expand-btn:hover { color: var(--text); }
+  .sub-row { display: none; }
+  .sub-row.open { display: table-row; }
+  .sub-cell { padding: 0 12px 10px 28px !important; }
+  .sub-table { width: 100%; font-size: 12px; }
+  .sub-table td { padding: 5px 8px; border-bottom: 1px solid #242220; color: var(--muted); }
+  .sub-table tr:last-child td { border-bottom: none; }
+  .sub-table td:first-child { color: var(--text); }
+
+  /* ── No data ── */
+  .no-data { text-align: center; padding: 40px; color: var(--muted); font-size: 13px; }
+
+  .cat-active        { color: var(--green); }
+  .cat-zamena        { color: var(--red); }
+  .cat-ban           { color: #c44; }
+  .cat-biz_verif     { color: var(--blue); }
+  .cat-review        { color: var(--yellow); }
+  .cat-appeal_failed { color: var(--orange); }
+  .cat-other         { color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page-wrap">
+
+  <!-- Top bar -->
+  <div class="top-bar">
+    <a class="back-link" href="index.html">← Назад</a>
+    <div>
+      <div class="page-title">Верификации</div>
+      <div class="page-subtitle">Обновлено: 21.04.2026 17:24</div>
+    </div>
+  </div>
+
+  <!-- Period selector -->
+  <div class="period-bar">
+    <button class="period-btn" id="btn-mar" onclick="setPeriod('mar')">Март 2026</button>
+    <button class="period-btn active" id="btn-apr" onclick="setPeriod('apr')">Апрель 2026</button>
+  </div>
+
+  <div class="main" id="main-content"></div>
+
+</div>
+
+<script>
+const VERIF_MAR = {"total": 4180, "verif_count": 0, "not_verif_count": 4180, "verif_pct": 0.0, "outcomes": {}, "by_buyer": [{"buyer": "Rook MB", "total": 553, "verif": 0, "verif_pct": 0.0, "active": 0, "active_pct": 0, "zamena": 0, "ban": 0, "biz_verif": 0, "appeal_failed": 0, "review": 0, "other": 0}, {"buyer": "Avi MB", "total": 443, "verif": 0, "verif_pct": 0.0, "active": 0, "active_pct": 0, "zamena": 0, "ban": 0, "biz_verif": 0, "appeal_failed": 0, "review": 0, "other": 0}, {"buyer": "Gadi MB", "total": 339, "verif": 0, "verif_pct": 0.0, "active": 0, "active_pct": 0, "zamena": 0, "ban": 0, "biz_verif": 0, "appeal_failed": 0, "review": 0, "other": 0}, {"buyer": "Gramm MB", "total": 337, "verif": 0, "verif_pct": 0.0, "active": 0, "active_pct": 0, "zamena": 0, "ban": 0, "biz_verif": 0, "appeal_failed": 0, "review": 0, "other": 0}, {"buyer": "Raze MB", "total": 331, "verif": 0, "verif_pct": 0.0, "active": 0, "active_pct": 0, "zamena": 0, "ban": 0, "biz_verif": 0, "appeal_failed": 0, "review": 0, "other": 0}, {"buyer": "Drake MB", "total": 315, "verif": 0, "verif_pct": 0.0, "active": 0, "active_pct": 0, "zamena": 0, "ban": 0, "biz_verif": 0, "appeal_failed": 0, "review": 0, "other": 0}, {"buyer": "Shadow MB", "total": 303, "verif": 0, "verif_pct": 0.0, "active": 0, "active_pct": 0, "zamena": 0, "ban": 0, "biz_verif": 0, "appeal_failed": 0, "review": 0, "other": 0}, {"buyer": "BadBunny", "total": 302, "verif": 0, "verif_pct": 0.0, "active": 0, "active_pct": 0, "zamena": 0, "ban": 0, "biz_verif": 0, "appeal_failed": 0, "review": 0, "other": 0}, {"buyer": "Arch MB", "total": 283, "verif": 0, "verif_pct": 0.0, "active": 0, "active_pct": 0, "zamena": 0, "ban": 0, "biz_verif": 0, "appeal_failed": 0, "review": 0, "other": 0}, {"buyer": "Miller MB", "total": 280, "verif": 0, "verif_pct": 0.0, "active": 0, "active_pct": 0, "zamena": 0, "ban": 0, "biz_verif": 0, "appeal_failed": 0, "review": 0, "other": 0}, {"buyer": "Travis MB", "total": 280, "verif": 0, "verif_pct": 0.0, "active": 0, "active_pct": 0, "zamena": 0, "ban": 0, "biz_verif": 0, "appeal_failed": 0, "review": 0, "other": 0}, {"buyer": "Gogi MB", "total": 261, "verif": 0, "verif_pct": 0.0, "active": 0, "active_pct": 0, "zamena": 0, "ban": 0, "biz_verif": 0, "appeal_failed": 0, "review": 0, "other": 0}, {"buyer": "Alex MB", "total": 74, "verif": 0, "verif_pct": 0.0, "active": 0, "active_pct": 0, "zamena": 0, "ban": 0, "biz_verif": 0, "appeal_failed": 0, "review": 0, "other": 0}, {"buyer": "Mose MB", "total": 49, "verif": 0, "verif_pct": 0.0, "active": 0, "active_pct": 0, "zamena": 0, "ban": 0, "biz_verif": 0, "appeal_failed": 0, "review": 0, "other": 0}, {"buyer": "Marina MB", "total": 12, "verif": 0, "verif_pct": 0.0, "active": 0, "active_pct": 0, "zamena": 0, "ban": 0, "biz_verif": 0, "appeal_failed": 0, "review": 0, "other": 0}, {"buyer": "Tim MB", "total": 10, "verif": 0, "verif_pct": 0.0, "active": 0, "active_pct": 0, "zamena": 0, "ban": 0, "biz_verif": 0, "appeal_failed": 0, "review": 0, "other": 0}, {"buyer": "Kolos MB", "total": 8, "verif": 0, "verif_pct": 0.0, "active": 0, "active_pct": 0, "zamena": 0, "ban": 0, "biz_verif": 0, "appeal_failed": 0, "review": 0, "other": 0}], "by_doc_seller": [{"seller": "1-k1", "total": 1951, "verif": 0, "verif_pct": 0.0, "active": 0, "active_pct": 0, "zamena": 0, "ban": 0, "biz_verif": 0}, {"seller": "Sidorovich", "total": 975, "verif": 0, "verif_pct": 0.0, "active": 0, "active_pct": 0, "zamena": 0, "ban": 0, "biz_verif": 0}, {"seller": "Viiking", "total": 962, "verif": 0, "verif_pct": 0.0, "active": 0, "active_pct": 0, "zamena": 0, "ban": 0, "biz_verif": 0}, {"seller": "3-lod", "total": 120, "verif": 0, "verif_pct": 0.0, "active": 0, "active_pct": 0, "zamena": 0, "ban": 0, "biz_verif": 0}, {"seller": "Fels", "total": 79, "verif": 0, "verif_pct": 0.0, "active": 0, "active_pct": 0, "zamena": 0, "ban": 0, "biz_verif": 0}, {"seller": "—", "total": 78, "verif": 0, "verif_pct": 0.0, "active": 0, "active_pct": 0, "zamena": 0, "ban": 0, "biz_verif": 0}, {"seller": "Doc", "total": 13, "verif": 0, "verif_pct": 0.0, "active": 0, "active_pct": 0, "zamena": 0, "ban": 0, "biz_verif": 0}, {"seller": "VladN", "total": 2, "verif": 0, "verif_pct": 0.0, "active": 0, "active_pct": 0, "zamena": 0, "ban": 0, "biz_verif": 0}], "by_gmail_seller": [{"seller": "Gmail_boss", "total": 1644, "verif": 0, "verif_pct": 0.0, "active": 0, "active_pct": 0, "zamena": 0, "ban": 0}, {"seller": "itsPVApro", "total": 1030, "verif": 0, "verif_pct": 0.0, "active": 0, "active_pct": 0, "zamena": 0, "ban": 0}, {"seller": "DarkSt", "total": 565, "verif": 0, "verif_pct": 0.0, "active": 0, "active_pct": 0, "zamena": 0, "ban": 0}, {"seller": "buy_acc_srvs", "total": 412, "verif": 0, "verif_pct": 0.0, "active": 0, "active_pct": 0, "zamena": 0, "ban": 0}, {"seller": "acmarket", "total": 176, "verif": 0, "verif_pct": 0.0, "active": 0, "active_pct": 0, "zamena": 0, "ban": 0}, {"seller": "primeac", "total": 159, "verif": 0, "verif_pct": 0.0, "active": 0, "active_pct": 0, "zamena": 0, "ban": 0}, {"seller": "TN_GV", "total": 130, "verif": 0, "verif_pct": 0.0, "active": 0, "active_pct": 0, "zamena": 0, "ban": 0}, {"seller": "—", "total": 33, "verif": 0, "verif_pct": 0.0, "active": 0, "active_pct": 0, "zamena": 0, "ban": 0}, {"seller": "smmseo", "total": 12, "verif": 0, "verif_pct": 0.0, "active": 0, "active_pct": 0, "zamena": 0, "ban": 0}, {"seller": "z2u", "total": 12, "verif": 0, "verif_pct": 0.0, "active": 0, "active_pct": 0, "zamena": 0, "ban": 0}, {"seller": "haruu", "total": 7, "verif": 0, "verif_pct": 0.0, "active": 0, "active_pct": 0, "zamena": 0, "ban": 0}], "ban_reasons": [], "weekly": [{"week": "2026-03-02", "total": 945, "verif": 0, "verif_pct": 0.0, "active": 0, "active_pct": 0, "zamena": 0, "ban": 0, "biz_verif": 0}, {"week": "2026-03-09", "total": 710, "verif": 0, "verif_pct": 0.0, "active": 0, "active_pct": 0, "zamena": 0, "ban": 0, "biz_verif": 0}, {"week": "2026-03-16", "total": 1235, "verif": 0, "verif_pct": 0.0, "active": 0, "active_pct": 0, "zamena": 0, "ban": 0, "biz_verif": 0}, {"week": "2026-03-23", "total": 834, "verif": 0, "verif_pct": 0.0, "active": 0, "active_pct": 0, "zamena": 0, "ban": 0, "biz_verif": 0}, {"week": "2026-03-30", "total": 456, "verif": 0, "verif_pct": 0.0, "active": 0, "active_pct": 0, "zamena": 0, "ban": 0, "biz_verif": 0}]};
+const VERIF_APR = {"total": 3262, "verif_count": 0, "not_verif_count": 3262, "verif_pct": 0.0, "outcomes": {}, "by_buyer": [{"buyer": "Gogi MB", "total": 521, "verif": 0, "verif_pct": 0.0, "active": 0, "active_pct": 0, "zamena": 0, "ban": 0, "biz_verif": 0, "appeal_failed": 0, "review": 0, "other": 0}, {"buyer": "BadBunny", "total": 505, "verif": 0, "verif_pct": 0.0, "active": 0, "active_pct": 0, "zamena": 0, "ban": 0, "biz_verif": 0, "appeal_failed": 0, "review": 0, "other": 0}, {"buyer": "Shadow MB", "total": 445, "verif": 0, "verif_pct": 0.0, "active": 0, "active_pct": 0, "zamena": 0, "ban": 0, "biz_verif": 0, "appeal_failed": 0, "review": 0, "other": 0}, {"buyer": "Rook MB", "total": 390, "verif": 0, "verif_pct": 0.0, "active": 0, "active_pct": 0, "zamena": 0, "ban": 0, "biz_verif": 0, "appeal_failed": 0, "review": 0, "other": 0}, {"buyer": "Arch MB", "total": 378, "verif": 0, "verif_pct": 0.0, "active": 0, "active_pct": 0, "zamena": 0, "ban": 0, "biz_verif": 0, "appeal_failed": 0, "review": 0, "other": 0}, {"buyer": "Kolos MB", "total": 345, "verif": 0, "verif_pct": 0.0, "active": 0, "active_pct": 0, "zamena": 0, "ban": 0, "biz_verif": 0, "appeal_failed": 0, "review": 0, "other": 0}, {"buyer": "Avi MB", "total": 343, "verif": 0, "verif_pct": 0.0, "active": 0, "active_pct": 0, "zamena": 0, "ban": 0, "biz_verif": 0, "appeal_failed": 0, "review": 0, "other": 0}, {"buyer": "Gramm MB", "total": 239, "verif": 0, "verif_pct": 0.0, "active": 0, "active_pct": 0, "zamena": 0, "ban": 0, "biz_verif": 0, "appeal_failed": 0, "review": 0, "other": 0}, {"buyer": "Michael MB", "total": 60, "verif": 0, "verif_pct": 0.0, "active": 0, "active_pct": 0, "zamena": 0, "ban": 0, "biz_verif": 0, "appeal_failed": 0, "review": 0, "other": 0}, {"buyer": "Sheva MB", "total": 25, "verif": 0, "verif_pct": 0.0, "active": 0, "active_pct": 0, "zamena": 0, "ban": 0, "biz_verif": 0, "appeal_failed": 0, "review": 0, "other": 0}, {"buyer": "Mose MB", "total": 8, "verif": 0, "verif_pct": 0.0, "active": 0, "active_pct": 0, "zamena": 0, "ban": 0, "biz_verif": 0, "appeal_failed": 0, "review": 0, "other": 0}, {"buyer": "Gadi MB", "total": 3, "verif": 0, "verif_pct": 0.0, "active": 0, "active_pct": 0, "zamena": 0, "ban": 0, "biz_verif": 0, "appeal_failed": 0, "review": 0, "other": 0}], "by_doc_seller": [{"seller": "1-k1", "total": 2003, "verif": 0, "verif_pct": 0.0, "active": 0, "active_pct": 0, "zamena": 0, "ban": 0, "biz_verif": 0}, {"seller": "3-lod", "total": 1089, "verif": 0, "verif_pct": 0.0, "active": 0, "active_pct": 0, "zamena": 0, "ban": 0, "biz_verif": 0}, {"seller": "Viiking", "total": 60, "verif": 0, "verif_pct": 0.0, "active": 0, "active_pct": 0, "zamena": 0, "ban": 0, "biz_verif": 0}, {"seller": "—", "total": 34, "verif": 0, "verif_pct": 0.0, "active": 0, "active_pct": 0, "zamena": 0, "ban": 0, "biz_verif": 0}, {"seller": "Sidorovich", "total": 32, "verif": 0, "verif_pct": 0.0, "active": 0, "active_pct": 0, "zamena": 0, "ban": 0, "biz_verif": 0}, {"seller": "7-chufri", "total": 20, "verif": 0, "verif_pct": 0.0, "active": 0, "active_pct": 0, "zamena": 0, "ban": 0, "biz_verif": 0}, {"seller": "Fels", "total": 10, "verif": 0, "verif_pct": 0.0, "active": 0, "active_pct": 0, "zamena": 0, "ban": 0, "biz_verif": 0}, {"seller": "6-artmak", "total": 7, "verif": 0, "verif_pct": 0.0, "active": 0, "active_pct": 0, "zamena": 0, "ban": 0, "biz_verif": 0}, {"seller": "LP Manager", "total": 6, "verif": 0, "verif_pct": 0.0, "active": 0, "active_pct": 0, "zamena": 0, "ban": 0, "biz_verif": 0}, {"seller": "Doc", "total": 1, "verif": 0, "verif_pct": 0.0, "active": 0, "active_pct": 0, "zamena": 0, "ban": 0, "biz_verif": 0}], "by_gmail_seller": [{"seller": "DarkSt", "total": 2356, "verif": 0, "verif_pct": 0.0, "active": 0, "active_pct": 0, "zamena": 0, "ban": 0}, {"seller": "itshop", "total": 432, "verif": 0, "verif_pct": 0.0, "active": 0, "active_pct": 0, "zamena": 0, "ban": 0}, {"seller": "primeac", "total": 210, "verif": 0, "verif_pct": 0.0, "active": 0, "active_pct": 0, "zamena": 0, "ban": 0}, {"seller": "acmarket", "total": 94, "verif": 0, "verif_pct": 0.0, "active": 0, "active_pct": 0, "zamena": 0, "ban": 0}, {"seller": "TN_GV", "total": 60, "verif": 0, "verif_pct": 0.0, "active": 0, "active_pct": 0, "zamena": 0, "ban": 0}, {"seller": "Gmail_boss", "total": 41, "verif": 0, "verif_pct": 0.0, "active": 0, "active_pct": 0, "zamena": 0, "ban": 0}, {"seller": "itsPVApro", "total": 20, "verif": 0, "verif_pct": 0.0, "active": 0, "active_pct": 0, "zamena": 0, "ban": 0}, {"seller": "smmacc", "total": 19, "verif": 0, "verif_pct": 0.0, "active": 0, "active_pct": 0, "zamena": 0, "ban": 0}, {"seller": "buy_acc_srvs", "total": 15, "verif": 0, "verif_pct": 0.0, "active": 0, "active_pct": 0, "zamena": 0, "ban": 0}, {"seller": "smmseo", "total": 10, "verif": 0, "verif_pct": 0.0, "active": 0, "active_pct": 0, "zamena": 0, "ban": 0}, {"seller": "—", "total": 5, "verif": 0, "verif_pct": 0.0, "active": 0, "active_pct": 0, "zamena": 0, "ban": 0}], "ban_reasons": [], "weekly": [{"week": "2026-03-30", "total": 703, "verif": 0, "verif_pct": 0.0, "active": 0, "active_pct": 0, "zamena": 0, "ban": 0, "biz_verif": 0}, {"week": "2026-04-06", "total": 1176, "verif": 0, "verif_pct": 0.0, "active": 0, "active_pct": 0, "zamena": 0, "ban": 0, "biz_verif": 0}, {"week": "2026-04-13", "total": 1133, "verif": 0, "verif_pct": 0.0, "active": 0, "active_pct": 0, "zamena": 0, "ban": 0, "biz_verif": 0}, {"week": "2026-04-20", "total": 250, "verif": 0, "verif_pct": 0.0, "active": 0, "active_pct": 0, "zamena": 0, "ban": 0, "biz_verif": 0}]};
+
+let activePeriod = 'apr';
+
+function setPeriod(p) {
+  activePeriod = p;
+  document.getElementById('btn-mar').classList.toggle('active', p === 'mar');
+  document.getElementById('btn-apr').classList.toggle('active', p === 'apr');
+  render();
+}
+
+function getData() {
+  return activePeriod === 'mar' ? VERIF_MAR : VERIF_APR;
+}
+
+function fmt(n) { return (n == null ? '—' : n); }
+function pctFmt(n) { return (n == null ? '—' : n.toFixed(1) + '%'); }
+
+function colorForCat(cat) {
+  const m = {active:'green',zamena:'red',ban:'#c44',biz_verif:'blue',review:'yellow',appeal_failed:'orange',other:'muted'};
+  return m[cat] || 'muted';
+}
+function labelForCat(cat) {
+  const m = {active:'Активные',zamena:'На замену',ban:'Бан',biz_verif:'Бизнес вериф',review:'Review / Очередь',appeal_failed:'Appeal Failed',other:'Прочее'};
+  return m[cat] || cat;
+}
+function dotColor(cat) {
+  const m = {active:'#4caf7d',zamena:'#e05c5c',ban:'#c44444',biz_verif:'#5c9ce0',review:'#d4b44a',appeal_failed:'#e07a2f',other:'#888780'};
+  return m[cat] || '#888780';
+}
+function badgeClass(cat) {
+  const m = {active:'badge-green',zamena:'badge-red',ban:'badge-red',biz_verif:'badge-blue',review:'badge-yellow',appeal_failed:'badge-muted',other:'badge-muted'};
+  return m[cat] || 'badge-muted';
+}
+
+function barHtml(pct, cls) {
+  return `<div class="pct-bar"><div class="bar-outer"><div class="bar-inner bar-${cls}" style="width:${Math.min(pct||0,100)}%"></div></div><span class="pct-num">${pctFmt(pct)}</span></div>`;
+}
+
+function render() {
+  const d = getData();
+  const el = document.getElementById('main-content');
+  if (!d) {
+    el.innerHTML = '<div class="no-data">Данных за этот период нет</div>';
+    return;
+  }
+
+  const vc = d.verif_count || 0;
+  const total = d.total || 0;
+  const outcomes = d.outcomes || {};
+  const active = outcomes.active || 0;
+  const zamena = outcomes.zamena || 0;
+  const ban = outcomes.ban || 0;
+  const biz = outcomes.biz_verif || 0;
+  const review = outcomes.review || 0;
+  const appeal = outcomes.appeal_failed || 0;
+  const other = outcomes.other || 0;
+  const notVerif = d.not_verif_count || 0;
+
+  // ── Funnel ──
+  let html = `
+  <div class="funnel-section">
+    <div class="section-label">Воронка верификаций</div>
+    <div class="funnel-grid">
+      <div class="funnel-card">
+        <div class="funnel-label">Всего выдано</div>
+        <div class="funnel-value">${total}</div>
+        <div class="funnel-pct">Аккаунты с internal_status = Выдан</div>
+      </div>
+      <div class="funnel-card highlight">
+        <div class="funnel-label">Прошли вериф</div>
+        <div class="funnel-value blue">${vc}</div>
+        <div class="funnel-pct">${pctFmt(d.verif_pct)} от выданных</div>
+      </div>
+      <div class="funnel-card">
+        <div class="funnel-label">Не верифицированы</div>
+        <div class="funnel-value">${notVerif}</div>
+        <div class="funnel-pct">${pctFmt(total ? (notVerif/total*100) : 0)} от выданных</div>
+      </div>
+      <div class="funnel-card">
+        <div class="funnel-label">Активны после</div>
+        <div class="funnel-value green">${active}</div>
+        <div class="funnel-pct">${pctFmt(vc ? (active/vc*100) : 0)} от верифицированных</div>
+      </div>
+      <div class="funnel-card">
+        <div class="funnel-label">На замену</div>
+        <div class="funnel-value red">${zamena}</div>
+        <div class="funnel-pct">${pctFmt(vc ? (zamena/vc*100) : 0)} от верифицированных</div>
+      </div>
+      <div class="funnel-card">
+        <div class="funnel-label">Бан</div>
+        <div class="funnel-value red">${ban}</div>
+        <div class="funnel-pct">${pctFmt(vc ? (ban/vc*100) : 0)} от верифицированных</div>
+      </div>
+    </div>
+  </div>`;
+
+  // ── Outcomes breakdown cards ──
+  const outcomeOrder = ['active','zamena','ban','biz_verif','review','appeal_failed','other'];
+  html += `
+  <div class="section-label">Разбивка исходов верификации</div>
+  <div class="outcomes-grid">`;
+  for (const cat of outcomeOrder) {
+    const n = outcomes[cat] || 0;
+    if (!n) continue;
+    const p = vc ? (n/vc*100) : 0;
+    html += `
+    <div class="outcome-card">
+      <div class="outcome-name">
+        <span class="outcome-dot" style="background:${dotColor(cat)}"></span>${labelForCat(cat)}
+      </div>
+      <div class="outcome-val cat-${cat}">${n}</div>
+      <div class="outcome-pct">${pctFmt(p)} от верифицированных</div>
+    </div>`;
+  }
+  html += `</div>`;
+
+  // ── By buyer ──
+  const byBuyer = d.by_buyer || [];
+  html += `
+  <div class="table-section">
+    <div class="section-label">По баерам</div>
+    <div class="table-wrap">
+    <table>
+      <thead><tr>
+        <th>Баер</th>
+        <th class="r">Выдано</th>
+        <th class="r">Прошли вериф</th>
+        <th>% верификаций</th>
+        <th class="r">Активны</th>
+        <th>% актив.</th>
+        <th class="r">На замену</th>
+        <th class="r">Бан</th>
+        <th class="r">Биз.вериф</th>
+        <th class="r">Review</th>
+        <th class="r">Прочее</th>
+      </tr></thead>
+      <tbody>`;
+  for (const b of byBuyer) {
+    html += `<tr>
+      <td><strong>${b.buyer}</strong></td>
+      <td class="r">${b.total}</td>
+      <td class="r"><span class="badge badge-blue">${b.verif}</span></td>
+      <td>${barHtml(b.verif_pct,'blue')}</td>
+      <td class="r"><span class="badge badge-green">${b.active||0}</span></td>
+      <td>${barHtml(b.active_pct,'green')}</td>
+      <td class="r">${b.zamena||0 ? `<span class="badge badge-red">${b.zamena}</span>` : '—'}</td>
+      <td class="r">${b.ban||0 ? `<span class="badge badge-red">${b.ban}</span>` : '—'}</td>
+      <td class="r">${b.biz_verif||0 || '—'}</td>
+      <td class="r">${b.review||0 || '—'}</td>
+      <td class="r">${b.other||0 || '—'}</td>
+    </tr>`;
+  }
+  html += `</tbody></table></div></div>`;
+
+  // ── By doc_seller ──
+  const byDoc = d.by_doc_seller || [];
+  html += `
+  <div class="table-section">
+    <div class="section-label">По doc seller</div>
+    <div class="table-wrap">
+    <table>
+      <thead><tr>
+        <th>Doc Seller</th>
+        <th class="r">Выдано</th>
+        <th class="r">Прошли вериф</th>
+        <th>% верификаций</th>
+        <th class="r">Активны</th>
+        <th>% актив.</th>
+        <th class="r">На замену</th>
+        <th class="r">Бан</th>
+        <th class="r">Биз.вериф</th>
+      </tr></thead>
+      <tbody>`;
+  for (const s of byDoc) {
+    html += `<tr>
+      <td><strong>${s.seller}</strong></td>
+      <td class="r">${s.total}</td>
+      <td class="r"><span class="badge badge-blue">${s.verif}</span></td>
+      <td>${barHtml(s.verif_pct,'blue')}</td>
+      <td class="r"><span class="badge badge-green">${s.active||0}</span></td>
+      <td>${barHtml(s.active_pct,'green')}</td>
+      <td class="r">${s.zamena||0 ? `<span class="badge badge-red">${s.zamena}</span>` : '—'}</td>
+      <td class="r">${s.ban||0 ? `<span class="badge badge-red">${s.ban}</span>` : '—'}</td>
+      <td class="r">${s.biz_verif||0 || '—'}</td>
+    </tr>`;
+  }
+  html += `</tbody></table></div></div>`;
+
+  // ── By gmail_seller ──
+  const byGmail = d.by_gmail_seller || [];
+  html += `
+  <div class="table-section">
+    <div class="section-label">По gmail seller</div>
+    <div class="table-wrap">
+    <table>
+      <thead><tr>
+        <th>Gmail Seller</th>
+        <th class="r">Выдано</th>
+        <th class="r">Прошли вериф</th>
+        <th>% верификаций</th>
+        <th class="r">Активны</th>
+        <th>% актив.</th>
+        <th class="r">На замену</th>
+        <th class="r">Бан</th>
+      </tr></thead>
+      <tbody>`;
+  for (const s of byGmail) {
+    html += `<tr>
+      <td><strong>${s.seller}</strong></td>
+      <td class="r">${s.total}</td>
+      <td class="r"><span class="badge badge-blue">${s.verif}</span></td>
+      <td>${barHtml(s.verif_pct,'blue')}</td>
+      <td class="r"><span class="badge badge-green">${s.active||0}</span></td>
+      <td>${barHtml(s.active_pct,'green')}</td>
+      <td class="r">${s.zamena||0 ? `<span class="badge badge-red">${s.zamena}</span>` : '—'}</td>
+      <td class="r">${s.ban||0 ? `<span class="badge badge-red">${s.ban}</span>` : '—'}</td>
+    </tr>`;
+  }
+  html += `</tbody></table></div></div>`;
+
+  // ── Weekly dynamics ──
+  const weekly = d.weekly || [];
+  if (weekly.length) {
+    html += `
+    <div class="table-section">
+      <div class="section-label">Недельная динамика</div>
+      <div class="table-wrap">
+      <table>
+        <thead><tr>
+          <th>Неделя (с)</th>
+          <th class="r">Выдано</th>
+          <th class="r">Прошли вериф</th>
+          <th>% верификаций</th>
+          <th class="r">Активны</th>
+          <th>% актив.</th>
+          <th class="r">На замену</th>
+          <th class="r">Бан</th>
+          <th class="r">Биз.вериф</th>
+        </tr></thead>
+        <tbody>`;
+    for (const w of weekly) {
+      html += `<tr class="week-row-total">
+        <td>${w.week}</td>
+        <td class="r">${w.total}</td>
+        <td class="r"><span class="badge badge-blue">${w.verif||0}</span></td>
+        <td>${barHtml(w.verif_pct,'blue')}</td>
+        <td class="r"><span class="badge badge-green">${w.active||0}</span></td>
+        <td>${barHtml(w.active_pct,'green')}</td>
+        <td class="r">${w.zamena||0 ? `<span class="badge badge-red">${w.zamena}</span>` : '—'}</td>
+        <td class="r">${w.ban||0 ? `<span class="badge badge-red">${w.ban}</span>` : '—'}</td>
+        <td class="r">${w.biz_verif||0 || '—'}</td>
+      </tr>`;
+    }
+    html += `</tbody></table></div></div>`;
+  }
+
+  // ── Detailed status breakdown ──
+  const banReasons = d.ban_reasons || [];
+  if (banReasons.length) {
+    html += `
+    <div class="table-section">
+      <div class="section-label">Детальная разбивка статусов (прошедшие вериф)</div>
+      <div class="table-wrap">
+      <table>
+        <thead><tr>
+          <th>Account Status</th>
+          <th>Категория</th>
+          <th class="r">Кол-во</th>
+          <th>Доля от прошедших вериф</th>
+        </tr></thead>
+        <tbody>`;
+    for (const r of banReasons) {
+      html += `<tr>
+        <td>${r.status}</td>
+        <td><span class="badge ${badgeClass(r.cat)}">${labelForCat(r.cat)}</span></td>
+        <td class="r">${r.count}</td>
+        <td>${barHtml(r.pct, colorForCat(r.cat))}</td>
+      </tr>`;
+    }
+    html += `</tbody></table></div></div>`;
+  }
+
+  el.innerHTML = html;
+}
+
+// Initial render
+render();
+</script>
+</body>
+</html>
