@@ -189,7 +189,7 @@
     <a class="back-link" href="index.html">← Назад</a>
     <div>
       <div class="page-title">Верификации</div>
-      <div class="page-subtitle">Обновлено: 22.04.2026 11:59</div>
+      <div class="page-subtitle">Обновлено: 22.04.2026 12:05</div>
     </div>
   </div>
 
@@ -323,9 +323,9 @@ function render() {
         <div class="funnel-pct">${pctFmt(total ? (notVerif/total*100) : 0)} от выданных</div>
       </div>
       <div class="funnel-card">
-        <div class="funnel-label">Активны после</div>
-        <div class="funnel-value green">${active}</div>
-        <div class="funnel-pct">${pctFmt(vc ? (active/vc*100) : 0)} от верифицированных</div>
+        <div class="funnel-label">Без замены/бана</div>
+        <div class="funnel-value green">${vc - zamena - ban}</div>
+        <div class="funnel-pct">${pctFmt(vc ? ((vc-zamena-ban)/vc*100) : 0)} от верифицированных</div>
       </div>
       <div class="funnel-card">
         <div class="funnel-label">На замену</div>
@@ -405,7 +405,7 @@ function render() {
       <td class="r"><span class="badge badge-blue">${b.verif}</span></td>
       <td>${barHtml(b.verif_pct,'blue')}</td>
       <td class="r"><span class="badge badge-green">${b.active||0}</span></td>
-      <td>${barHtml(b.active_pct,'green')}</td>
+      <td>${(()=>{ const survived = b.verif - (b.zamena||0) - (b.ban||0); const pct = b.verif ? survived/b.verif*100 : 0; return barHtml(pct,'green'); })()}</td>
       <td class="r">${zamCell}</td>
       <td class="r">${banCell}</td>
       <td class="r">${b.biz_verif||0 || '—'}</td>
