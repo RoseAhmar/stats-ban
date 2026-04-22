@@ -189,7 +189,7 @@
     <a class="back-link" href="index.html">← Назад</a>
     <div>
       <div class="page-title">Верификации</div>
-      <div class="page-subtitle">Обновлено: 22.04.2026 10:59</div>
+      <div class="page-subtitle">Обновлено: 22.04.2026 11:02</div>
     </div>
   </div>
 
@@ -209,24 +209,41 @@ const VERIF_APR = {"total": 3576, "verif_count": 611, "not_verif_count": 2965, "
 
 // ── Global floating tooltip ──
 const _tip = document.getElementById('global-tip');
-document.addEventListener('mousemove', e => {
-  if (_tip.style.display === 'block') {
-    const pad = 14;
-    let x = e.clientX + pad;
-    let y = e.clientY + pad;
-    // не вылезать за правый край
-    if (x + _tip.offsetWidth > window.innerWidth - 8) x = e.clientX - _tip.offsetWidth - pad;
-    // не вылезать за нижний край
+const _tipData = {};  // id → html string
+
+function _placeTip(e) {
+  const pad = 16;
+  let x = e.clientX + pad;
+  let y = e.clientY + pad;
+  _tip.style.left = x + 'px';
+  _tip.style.top  = y + 'px';
+  // adjust after paint so offsetWidth is known
+  requestAnimationFrame(() => {
+    if (x + _tip.offsetWidth  > window.innerWidth  - 8) x = e.clientX - _tip.offsetWidth  - pad;
     if (y + _tip.offsetHeight > window.innerHeight - 8) y = e.clientY - _tip.offsetHeight - pad;
     _tip.style.left = x + 'px';
     _tip.style.top  = y + 'px';
+  });
+}
+document.addEventListener('mousemove', e => {
+  if (_tip.style.display === 'block') _placeTip(e);
+});
+document.addEventListener('mouseover', e => {
+  const el = e.target.closest('[data-tip-id]');
+  if (!el) return;
+  const id = el.getAttribute('data-tip-id');
+  if (_tipData[id]) {
+    _tip.innerHTML = _tipData[id];
+    _tip.style.display = 'block';
+    _placeTip(e);
   }
 });
-function tipShow(el, html) {
-  _tip.innerHTML = html;
-  _tip.style.display = 'block';
-}
-function tipHide() { _tip.style.display = 'none'; }
+document.addEventListener('mouseout', e => {
+  const el = e.target.closest('[data-tip-id]');
+  if (el && !el.contains(e.relatedTarget)) {
+    _tip.style.display = 'none';
+  }
+});
 
 let activePeriod = 'apr';
 
@@ -344,17 +361,14 @@ function render() {
   html += `</div>`;
 
   // ── By buyer ──
-  function reasonsHtml(title, reasons) {
-    if (!reasons || !Object.keys(reasons).length) return '';
-    let rows = Object.entries(reasons).sort((a,b)=>b[1]-a[1])
-      .map(([k,v])=>`<div class="tip-row"><span class="tip-key">${k}</span><span class="tip-val">${v}</span></div>`).join('');
-    return `<div class="tip-title">${title}</div>${rows}`;
-  }
+  let _tipCounter = 0;
   function withTip(inner, title, reasons) {
-    const html = reasonsHtml(title, reasons);
-    if (!html) return inner;
-    const escaped = html.replace(/'/g, '&#39;').replace(/"/g, '&quot;');
-    return `<span class="has-tip" onmouseenter="tipShow(this,'${escaped}')" onmouseleave="tipHide()">${inner}</span>`;
+    if (!reasons || !Object.keys(reasons).length) return inner;
+    const id = 'tip' + (++_tipCounter);
+    const rows = Object.entries(reasons).sort((a,b)=>b[1]-a[1])
+      .map(([k,v])=>`<div class="tip-row"><span class="tip-key">${k}</span><span class="tip-val">${v}</span></div>`).join('');
+    _tipData[id] = `<div class="tip-title">${title}</div>${rows}`;
+    return `<span class="has-tip" data-tip-id="${id}">${inner}</span>`;
   }
   function successBadge(pct) {
     if (pct == null) return '—';
