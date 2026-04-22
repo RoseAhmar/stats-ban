@@ -189,7 +189,7 @@
     <a class="back-link" href="index.html">← Назад</a>
     <div>
       <div class="page-title">Верификации</div>
-      <div class="page-subtitle">Обновлено: 22.04.2026 12:05</div>
+      <div class="page-subtitle">Обновлено: 22.04.2026 12:09</div>
     </div>
   </div>
 
@@ -388,7 +388,7 @@ function render() {
         <th class="r">Прошли вериф</th>
         <th>% верификаций</th>
         <th class="r">Активны</th>
-        <th>% актив.</th>
+        <th class="r">% успеха</th>
         <th class="r">На замену</th>
         <th class="r">Бан</th>
         <th class="r">Биз.вериф</th>
@@ -405,7 +405,7 @@ function render() {
       <td class="r"><span class="badge badge-blue">${b.verif}</span></td>
       <td>${barHtml(b.verif_pct,'blue')}</td>
       <td class="r"><span class="badge badge-green">${b.active||0}</span></td>
-      <td>${(()=>{ const survived = b.verif - (b.zamena||0) - (b.ban||0); const pct = b.verif ? survived/b.verif*100 : 0; return barHtml(pct,'green'); })()}</td>
+      <td class="r">${(()=>{ const survived = b.verif - (b.zamena||0) - (b.ban||0); const pct = b.verif ? Math.round(survived/b.verif*1000)/10 : 0; return successBadge(pct); })()}</td>
       <td class="r">${zamCell}</td>
       <td class="r">${banCell}</td>
       <td class="r">${b.biz_verif||0 || '—'}</td>
@@ -428,7 +428,7 @@ function render() {
         <th class="r">Прошли вериф</th>
         <th>% верификаций</th>
         <th class="r">Активны</th>
-        <th>% актив.</th>
+        <th class="r">% успеха</th>
         <th class="r">На замену</th>
         <th class="r">Бан</th>
         <th class="r">Биз.вериф</th>
@@ -462,7 +462,7 @@ function render() {
         <th class="r">Прошли вериф</th>
         <th>% верификаций</th>
         <th class="r">Активны</th>
-        <th>% актив.</th>
+        <th class="r">% успеха</th>
         <th class="r">На замену</th>
         <th class="r">Бан</th>
       </tr></thead>
@@ -495,7 +495,7 @@ function render() {
           <th class="r">Прошли вериф</th>
           <th>% верификаций</th>
           <th class="r">Активны</th>
-          <th>% актив.</th>
+          <th class="r">% успеха</th>
           <th class="r">На замену</th>
           <th class="r">Бан</th>
           <th class="r">Биз.вериф</th>
