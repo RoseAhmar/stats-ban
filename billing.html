@@ -296,7 +296,7 @@
   <a class="back-link" href="index.html">← Главное меню</a>
   <div>
     <div class="page-title">Расчёт с баерами</div>
-    <div class="page-subtitle">Обновлено: 11.05.2026 11:16</div>
+    <div class="page-subtitle">Обновлено: 11.05.2026 12:49</div>
   </div>
 </div>
 
@@ -888,7 +888,7 @@ function renderDayDetail(data, date) {
     const zamEntry = (b.zamena_daily || []).find(z => z.date === date);
     const zamenas = zamEntry ? zamEntry.count : 0;
     const paid = total - zamenas;
-    rows.push({ buyer: b.buyer, total, zamenas, paid });
+    rows.push({ buyer: b.buyer, mb_team: b.mb_team || '', total, zamenas, paid });
   });
 
   if (rows.length === 0) {
@@ -915,8 +915,11 @@ function renderDayDetail(data, date) {
           const countCell = r.zamenas > 0
             ? `${r.paid} акк. + <span style="color:var(--text)">${r.zamenas} замен</span> <span style="color:var(--muted)">(${r.total})</span>`
             : `${r.total}`;
+          const teamBadge = r.mb_team && r.mb_team !== '—'
+            ? ` <span style="font-size:11px;color:var(--muted);font-weight:400">${r.mb_team}</span>`
+            : '';
           return `<tr>
-            <td>${r.buyer}</td>
+            <td>${r.buyer}${teamBadge}</td>
             <td style="text-align:right;font-weight:600">${countCell}</td>
             <td style="text-align:right" class="day-amount">${fmtMoney(r.paid * PRICE_PER_ACCOUNT)}</td>
           </tr>`;
