@@ -296,7 +296,7 @@
   <a class="back-link" href="index.html">← Главное меню</a>
   <div>
     <div class="page-title">Расчёт с баерами</div>
-    <div class="page-subtitle">Обновлено: 16.06.2026 11:55</div>
+    <div class="page-subtitle">Обновлено: 16.06.2026 12:10</div>
   </div>
 </div>
 
@@ -447,6 +447,8 @@ function render() {
     (b.zamena_daily || []).forEach(z => { zamDailyMap[z.date] = z.count; });
     const vitDailyMap = {};
     (b.vitfarm_daily || []).forEach(v => { vitDailyMap[v.date] = v.count; });
+    const agencyDailyMap = {};
+    (b.agency_daily || []).forEach(a => { agencyDailyMap[a.date] = a.agencies; });
     const dailyRows = b.daily.map(d => {
       const z = zamDailyMap[d.date] || 0;
       const vf = vitDailyMap[d.date] || 0;
@@ -460,9 +462,17 @@ function render() {
       } else {
         countCell = `${d.count} акк.`;
       }
+      const ags = agencyDailyMap[d.date] || {};
+      const agParts = Object.entries(ags)
+        .sort((a, b) => b[1] - a[1])
+        .map(([name, n]) => `${name} — ${n}`)
+        .join(', ');
+      const agencyLine = agParts
+        ? `<div style="font-size:11px;color:var(--muted);margin-top:2px;">${agParts}</div>`
+        : '';
       return `<tr>
         <td class="date-cell">${fmtDate(d.date)}</td>
-        <td class="count-cell">${countCell}</td>
+        <td class="count-cell">${countCell}${agencyLine}</td>
       </tr>`;
     }).join('');
 
