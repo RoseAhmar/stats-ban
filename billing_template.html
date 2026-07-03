@@ -162,6 +162,13 @@
     padding-top: 6px;
     border-top: 1px solid var(--border);
   }
+  .vitfarm-badge {
+    display: inline-block;
+    background: rgba(92,156,224,.12);
+    border: 1px solid rgba(92,156,224,.3);
+    color: #5c9ce0;
+    padding: 1px 7px; border-radius: 4px; font-size: 12px; font-weight: 600;
+  }
   .zamena-badge {
     display: inline-block;
     background: #3a2a18;
@@ -296,6 +303,8 @@
 <div class="period-bar">
   <button class="period-btn" id="btn-mar" onclick="setPeriod('mar')">Март 2026</button>
   <button class="period-btn" id="btn-apr" onclick="setPeriod('apr')">Апрель 2026</button>
+  <button class="period-btn" id="btn-may" onclick="setPeriod('may')">Май 2026</button>
+  <button class="period-btn active" id="btn-jun" onclick="setPeriod('jun')">Июнь 2026</button>
 </div>
 
 <div class="main">
@@ -349,8 +358,12 @@
 <script>
 const BILLING_MAR = [];
 const BILLING_APR = [];
+const BILLING_MAY = [];
+const BILLING_JUN = [];
 const COST_STATS_MAR = null;
 const COST_STATS_APR = null;
+const COST_STATS_MAY = null;
+const COST_STATS_JUN = null;
 const PRICE_PER_ACCOUNT = 16;
 
 const MONTHS_RU = {
@@ -369,7 +382,7 @@ function fmtMoney(n) {
   return '$' + n.toLocaleString('en-US');
 }
 
-let activePeriod = 'mar';
+let activePeriod = 'jun';
 
 function setPeriod(p) {
   activePeriod = p;
@@ -381,7 +394,7 @@ function setPeriod(p) {
 }
 
 function renderCostStats() {
-  const stats = activePeriod === 'mar' ? COST_STATS_MAR : COST_STATS_APR;
+  const stats = activePeriod === 'mar' ? COST_STATS_MAR : activePeriod === 'apr' ? COST_STATS_APR : activePeriod === 'may' ? COST_STATS_MAY : COST_STATS_JUN;
   const section = document.getElementById('cost-section');
   if (!stats) { section.style.display = 'none'; return; }
   section.style.display = '';
@@ -394,11 +407,12 @@ function renderCostStats() {
 }
 
 function render() {
-  const data = activePeriod === 'mar' ? BILLING_MAR : BILLING_APR;
+  const data = activePeriod === 'mar' ? BILLING_MAR : activePeriod === 'apr' ? BILLING_APR : activePeriod === 'may' ? BILLING_MAY : BILLING_JUN;
 
   // Summary
   const totalAcc = data.reduce((s, b) => s + b.total_accounts, 0);
   const totalZam = data.reduce((s, b) => s + b.zamenas, 0);
+  const totalVitfarm = data.reduce((s, b) => s + (b.vitfarm_free || 0), 0);
   const totalPaid = data.reduce((s, b) => s + b.paid, 0);
   const totalAmt = data.reduce((s, b) => s + b.amount, 0);
 
@@ -431,14 +445,34 @@ function render() {
   document.getElementById('buyers').innerHTML = data.map(b => {
     const zamDailyMap = {};
     (b.zamena_daily || []).forEach(z => { zamDailyMap[z.date] = z.count; });
+    const vitDailyMap = {};
+    (b.vitfarm_daily || []).forEach(v => { vitDailyMap[v.date] = v.count; });
+    const agencyDailyMap = {};
+    (b.agency_daily || []).forEach(a => { agencyDailyMap[a.date] = a.agencies; });
     const dailyRows = b.daily.map(d => {
       const z = zamDailyMap[d.date] || 0;
-      const countCell = z > 0
-        ? `${d.count - z} акк. + <span style="color:var(--text)">${z} замен</span> <span style="color:var(--muted)">(${d.count})</span>`
-        : `${d.count} акк.`;
+      const vf = vitDailyMap[d.date] || 0;
+      let countCell;
+      if (z > 0 && vf > 0) {
+        countCell = `${d.count - z - vf} акк. + <span style="color:var(--text)">${z} замен</span> + <span style="color:#5c9ce0">${vf} VF</span> <span style="color:var(--muted)">(${d.count})</span>`;
+      } else if (z > 0) {
+        countCell = `${d.count - z} акк. + <span style="color:var(--text)">${z} замен</span> <span style="color:var(--muted)">(${d.count})</span>`;
+      } else if (vf > 0) {
+        countCell = `${d.count - vf} акк. + <span style="color:#5c9ce0">${vf} VF</span> <span style="color:var(--muted)">(${d.count})</span>`;
+      } else {
+        countCell = `${d.count} акк.`;
+      }
+      const ags = agencyDailyMap[d.date] || {};
+      const agParts = Object.entries(ags)
+        .sort((a, b) => b[1] - a[1])
+        .map(([name, n]) => `${name} — ${n}`)
+        .join(', ');
+      const agencyLine = agParts
+        ? `<div style="font-size:11px;color:var(--muted);margin-top:2px;">${agParts}</div>`
+        : '';
       return `<tr>
         <td class="date-cell">${fmtDate(d.date)}</td>
-        <td class="count-cell">${countCell}</td>
+        <td class="count-cell">${countCell}${agencyLine}</td>
       </tr>`;
     }).join('');
 
@@ -446,6 +480,12 @@ function render() {
       ? `<div class="total-row">
            <span>из них замены <span class="zamena-badge">${b.zamenas}</span> — бесплатно</span>
            <span style="color:var(--green)">$0</span>
+         </div>`
+      : '';
+    const vitfarmLine = (b.vitfarm_free || 0) > 0
+      ? `<div class="total-row">
+           <span>VitFarm Free <span class="vitfarm-badge">${b.vitfarm_free}</span></span>
+           <span style="color:#5c9ce0">$0</span>
          </div>`
       : '';
 
@@ -475,6 +515,7 @@ function render() {
               <span>${b.total_accounts} акк.</span>
             </div>
             ${zamenaLine}
+            ${vitfarmLine}
             <div class="total-row final">
               <span>Итого к оплате</span>
               <span><strong>${b.paid}</strong> × $${PRICE_PER_ACCOUNT} = <span style="color:var(--green)">${fmtMoney(b.amount)}</span></span>
@@ -543,7 +584,7 @@ function weekLabel(monStr, allDates) {
 let activeWeek = null;
 
 function renderWeekly() {
-  const data = activePeriod === 'mar' ? BILLING_MAR : BILLING_APR;
+  const data = activePeriod === 'mar' ? BILLING_MAR : activePeriod === 'apr' ? BILLING_APR : activePeriod === 'may' ? BILLING_MAY : BILLING_JUN;
 
   // Collect all dates present in data
   const dateSet = new Set();
@@ -673,7 +714,7 @@ function renderWeekDetail(data, monStr, dateSet) {
 let activeMBTeamWeek = null; // null = все недели
 
 function renderMBTeam() {
-  const data = activePeriod === 'mar' ? BILLING_MAR : BILLING_APR;
+  const data = activePeriod === 'mar' ? BILLING_MAR : activePeriod === 'apr' ? BILLING_APR : activePeriod === 'may' ? BILLING_MAY : BILLING_JUN;
 
   // Collect all dates → compute weeks for pills
   const dateSet = new Set();
@@ -724,21 +765,33 @@ function renderMBTeam() {
       const filteredDaily = b.daily.filter(d => activeDates.has(d.date));
       if (!filteredDaily.length) return '';
 
-      const total   = filteredDaily.reduce((s, d) => s + d.count, 0);
-      const zamenas = filteredDaily.reduce((s, d) => s + (zamDailyMap[d.date] || 0), 0);
-      const paid    = total - zamenas;
-      const amount  = paid * PRICE_PER_ACCOUNT;
+      const vitDailyMapMB = {};
+      (b.vitfarm_daily || []).forEach(v => { vitDailyMapMB[v.date] = v.count; });
+      const total    = filteredDaily.reduce((s, d) => s + d.count, 0);
+      const zamenas  = filteredDaily.reduce((s, d) => s + (zamDailyMap[d.date] || 0), 0);
+      const vitfarmMB = filteredDaily.reduce((s, d) => s + (vitDailyMapMB[d.date] || 0), 0);
+      const paid     = total - zamenas - vitfarmMB;
+      const amount   = paid * PRICE_PER_ACCOUNT;
 
       teamAcc  += total;
       teamZam  += zamenas;
       teamPaid += paid;
+      // vitfarmMB tracked per buyer but not summed to team total separately
       teamAmt  += amount;
 
       const dailyRows = filteredDaily.map(d => {
         const z = zamDailyMap[d.date] || 0;
-        const countCell = z > 0
-          ? `${d.count - z} акк. + <span style="color:var(--text)">${z} замен</span> <span style="color:var(--muted)">(${d.count})</span>`
-          : `${d.count} акк.`;
+        const vf = vitDailyMapMB[d.date] || 0;
+        let countCell;
+        if (z > 0 && vf > 0) {
+          countCell = `${d.count - z - vf} акк. + <span style="color:var(--text)">${z} замен</span> + <span style="color:#5c9ce0">${vf} VF</span> <span style="color:var(--muted)">(${d.count})</span>`;
+        } else if (z > 0) {
+          countCell = `${d.count - z} акк. + <span style="color:var(--text)">${z} замен</span> <span style="color:var(--muted)">(${d.count})</span>`;
+        } else if (vf > 0) {
+          countCell = `${d.count - vf} акк. + <span style="color:#5c9ce0">${vf} VF</span> <span style="color:var(--muted)">(${d.count})</span>`;
+        } else {
+          countCell = `${d.count} акк.`;
+        }
         return `<tr>
           <td class="date-cell">${fmtDate(d.date)}</td>
           <td class="count-cell">${countCell}</td>
@@ -749,6 +802,12 @@ function renderMBTeam() {
         ? `<div class="total-row">
              <span>из них замены <span class="zamena-badge">${zamenas}</span> — бесплатно</span>
              <span style="color:var(--green)">$0</span>
+           </div>`
+        : '';
+      const vitfarmLineMB = vitfarmMB > 0
+        ? `<div class="total-row">
+             <span>VitFarm Free <span class="vitfarm-badge">${vitfarmMB}</span></span>
+             <span style="color:#5c9ce0">$0</span>
            </div>`
         : '';
 
@@ -771,6 +830,7 @@ function renderMBTeam() {
             <div class="buyer-totals">
               <div class="total-row"><span>Всего выдано</span><span>${total} акк.</span></div>
               ${zamenaLine}
+              ${vitfarmLineMB}
               <div class="total-row final">
                 <span>Итого к оплате</span>
                 <span><strong>${paid}</strong> × $${PRICE_PER_ACCOUNT} = <span style="color:var(--green)">${fmtMoney(amount)}</span></span>
@@ -804,7 +864,7 @@ function selectMBTeamWeek(mon) {
 }
 
 function renderDaily() {
-  const data = activePeriod === 'mar' ? BILLING_MAR : BILLING_APR;
+  const data = activePeriod === 'mar' ? BILLING_MAR : activePeriod === 'apr' ? BILLING_APR : activePeriod === 'may' ? BILLING_MAY : BILLING_JUN;
 
   // Собираем все уникальные даты
   const dateSet = new Set();
@@ -841,7 +901,9 @@ function renderDayDetail(data, date) {
     const zamEntry = (b.zamena_daily || []).find(z => z.date === date);
     const zamenas = zamEntry ? zamEntry.count : 0;
     const paid = total - zamenas;
-    rows.push({ buyer: b.buyer, total, zamenas, paid });
+    const agEntry = (b.agency_daily || []).find(a => a.date === date);
+    const agencies = agEntry ? agEntry.agencies : {};
+    rows.push({ buyer: b.buyer, mb_team: b.mb_team || '', total, zamenas, paid, agencies });
   });
 
   if (rows.length === 0) {
@@ -860,6 +922,7 @@ function renderDayDetail(data, date) {
         <tr>
           <th>Баер</th>
           <th style="text-align:right">Аккаунтов</th>
+          <th>Агенство</th>
           <th style="text-align:right">Сумма (×$${PRICE_PER_ACCOUNT})</th>
         </tr>
       </thead>
@@ -868,22 +931,35 @@ function renderDayDetail(data, date) {
           const countCell = r.zamenas > 0
             ? `${r.paid} акк. + <span style="color:var(--text)">${r.zamenas} замен</span> <span style="color:var(--muted)">(${r.total})</span>`
             : `${r.total}`;
+          const teamBadge = r.mb_team && r.mb_team !== '—'
+            ? ` <span style="font-size:11px;color:var(--muted);font-weight:400">${r.mb_team}</span>`
+            : '';
+          const agCell = Object.entries(r.agencies || {})
+            .filter(([ag]) => ag !== '—')
+            .sort((a, b) => b[1] - a[1])
+            .map(([ag, n]) => {
+              if (ag === 'VitFarm(Free)') return `<span style="color:var(--blue)">${ag}: ${n}</span>`;
+              if (ag === 'VitFarm') return `<span style="color:var(--accent)">${ag}: ${n}</span>`;
+              return `<span style="color:var(--muted)">${ag}: <span style="color:var(--text)">${n}</span></span>`;
+            }).join('<span style="color:var(--border)"> · </span>') || '<span style="color:var(--muted)">—</span>';
           return `<tr>
-            <td>${r.buyer}</td>
+            <td>${r.buyer}${teamBadge}</td>
             <td style="text-align:right;font-weight:600">${countCell}</td>
+            <td style="font-size:12px">${agCell}</td>
             <td style="text-align:right" class="day-amount">${fmtMoney(r.paid * PRICE_PER_ACCOUNT)}</td>
           </tr>`;
         }).join('')}
         <tr class="day-total-row">
           <td>Итого за ${fmtDate(date)}</td>
           <td style="text-align:right">${totalZamenas > 0 ? `${totalPaid} + <span style="color:var(--text)">${totalZamenas} замен</span> (${totalCount})` : totalCount}</td>
+          <td></td>
           <td style="text-align:right" class="day-amount">${fmtMoney(totalPaid * PRICE_PER_ACCOUNT)}</td>
         </tr>
       </tbody>
     </table>`;
 }
 
-setPeriod('apr');
+setPeriod('may');
 </script>
 </body>
 </html>

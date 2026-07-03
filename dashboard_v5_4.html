@@ -222,7 +222,9 @@
   <div class="period-bar">
     <button class="period-btn" onclick="setPeriod('all')">Всё время</button>
     <button class="period-btn" onclick="setPeriod('mar')">Март 2026</button>
-    <button class="period-btn active" onclick="setPeriod('apr')">Апрель 2026</button>
+    <button class="period-btn" onclick="setPeriod('apr')">Апрель 2026</button>
+    <button class="period-btn" onclick="setPeriod('may')">Май 2026</button>
+    <button class="period-btn active" onclick="setPeriod('jun')">Июнь 2026</button>
   </div>
 
   <div class="tabs">
@@ -311,10 +313,10 @@
     </div>
     <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:1rem;font-size:12px;color:#888780;">
       <span style="font-weight:600;">Верификация:</span>
-      <span style="display:flex;align-items:center;gap:5px;"><span style="width:12px;height:12px;border-radius:3px;background:#3a7d15;display:inline-block;"></span>Прошли</span>
-      <span style="display:flex;align-items:center;gap:5px;"><span style="width:12px;height:12px;border-radius:3px;background:#c02020;display:inline-block;"></span>На замену</span>
-      <span style="display:flex;align-items:center;gap:5px;"><span style="width:12px;height:12px;border-radius:3px;background:#185FA5;display:inline-block;"></span>В очереди (Ready to work, Review и др.)</span>
-      <span style="display:flex;align-items:center;gap:5px;"><span style="width:12px;height:12px;border-radius:3px;background:#534AB7;display:inline-block;"></span>Прочие статусы</span>
+      <span style="display:flex;align-items:center;gap:5px;"><span style="width:12px;height:12px;border-radius:3px;background:#3a7d15;display:inline-block;"></span>Прошел / Прошел+кло</span>
+      <span style="display:flex;align-items:center;gap:5px;"><span style="width:12px;height:12px;border-radius:3px;background:#c02020;display:inline-block;"></span>Не прошел</span>
+      <span style="display:flex;align-items:center;gap:5px;"><span style="width:12px;height:12px;border-radius:3px;background:#185FA5;display:inline-block;"></span>Подан (в ожидании)</span>
+      <span style="display:flex;align-items:center;gap:5px;"><span style="width:12px;height:12px;border-radius:3px;background:#7B5EA7;display:inline-block;"></span>Кло</span>
     </div>
     <div class="buyer-cards" id="buyer-cards"></div>
   </div><!-- /tab-buyers -->
@@ -341,11 +343,17 @@ const BUYERS_DATA = [];
 const RESERVE_TOTALS = {"mar": 0, "apr": 0};
 const BUYERS_DATA_MAR = [];
 const BUYERS_DATA_APR = [];
+const BUYERS_DATA_MAY = [];
+const BUYERS_DATA_JUN = [];
 const DOC_SELLERS_DATA = [];
 const DOC_SELLERS_DATA_MAR = [];
 const DOC_SELLERS_DATA_APR = [];
+const DOC_SELLERS_DATA_MAY = [];
+const DOC_SELLERS_DATA_JUN = [];
 const APRIL_1_MS = 1774994400000; // April 1 00:00 Europe/Brussels (UTC+2)
-let activePeriod = 'apr';
+const MAY_1_MS   = 1777586400000; // May 1 00:00 Europe/Brussels (UTC+2)
+const JUN_1_MS   = 1780264800000; // June 1 00:00 Europe/Brussels (UTC+2)
+let activePeriod = 'jun';
 
 
 function toggleComment(id){
@@ -392,7 +400,9 @@ function getFiltered(){
   const idQ=document.getElementById('filter-id').value.trim();
   let d=[...DATA];
   if(activePeriod === 'mar') d = d.filter(x => x.date_created_ms > 0 && x.date_created_ms < APRIL_1_MS);
-  else if(activePeriod === 'apr') d = d.filter(x => x.date_created_ms >= APRIL_1_MS);
+  else if(activePeriod === 'apr') d = d.filter(x => x.date_created_ms >= APRIL_1_MS && x.date_created_ms < MAY_1_MS);
+  else if(activePeriod === 'may') d = d.filter(x => x.date_created_ms >= MAY_1_MS && x.date_created_ms < JUN_1_MS);
+  else if(activePeriod === 'jun') d = d.filter(x => x.date_created_ms >= JUN_1_MS);
   if(idQ) d=d.filter(x=>x.id===idQ);
   if(g) d=d.filter(x=>x.gmail===g);
   if(dc) d=d.filter(x=>x.docs.some(doc=>doc.doc===dc));
@@ -664,66 +674,116 @@ render();
 // BUYERS
 function verCol(p){return p>=80?'#3a7d15':p>=60?'#9a5c08':'#c02020';}
 
+// ─── Верификация: общие хелперы ──────────────────────────────
+const VERIF_COLORS = {
+  'Прошел':        '#3a7d15',
+  'Прошел+кло':    '#2d9e6e',
+  'Не прошел вериф': '#c02020',
+  'Не прошел+кло': '#8B2020',
+  'Подан':         '#185FA5',
+  'Кло':           '#7B5EA7',
+  'Да':            '#888',
+};
+const VERIF_ORDER = ['Прошел','Прошел+кло','Не прошел вериф','Не прошел+кло','Подан','Кло','Да'];
+
+function verifAgg(buyers){
+  const vc = {};
+  buyers.forEach(b => { const v = b.verif_counts || {}; for(const k in v) vc[k] = (vc[k]||0) + v[k]; });
+  return vc;
+}
+function verifFinal(vc){
+  return (vc['Прошел']||0)+(vc['Прошел+кло']||0)+(vc['Не прошел вериф']||0)+(vc['Не прошел+кло']||0)+(vc['Кло']||0)+(vc['Да']||0);
+}
+function verifPassPct(vc){
+  const f = verifFinal(vc);
+  return f>0 ? Math.round((vc['Прошел']||0)/f*1000)/10 : 0;
+}
+function verifPassKloPct(vc){
+  const f = verifFinal(vc);
+  return f>0 ? Math.round(((vc['Прошел']||0)+(vc['Прошел+кло']||0))/f*1000)/10 : 0;
+}
+function verifTagsHTML(vc, small){
+  const fs = small ? 'font-size:10px;padding:1px 5px;' : '';
+  return VERIF_ORDER.filter(k=>vc[k]>0)
+    .map(k=>`<span class="stag" style="background:${VERIF_COLORS[k]}22;color:${VERIF_COLORS[k]};border:1px solid ${VERIF_COLORS[k]}55;${fs}">${k}: ${small?vc[k]:'<b>'+vc[k]+'</b>'}</span>`)
+    .join('');
+}
+// Цвет тега account_status
+function accCol(s){
+  const u = (s||'').toUpperCase();
+  if(u.startsWith('END') || ['ACTIVE','APPEAL SUCCESSFUL','ACTIVE/PAUSE','FREEZE'].some(x=>u.includes(x))) return '#3a7d15';
+  if(u.includes('ЗАМЕН')) return '#c02020';
+  if(u.includes('BAN') || u.includes('БАН') || u.includes('REJECT') || u.includes('FAILED') || u.includes('ОТКАЗ')) return '#8B2020';
+  if(['READY TO WORK','REVIEW','ВЕРИФ','BUSINESS'].some(x=>u.includes(x))) return '#185FA5';
+  return '#888';
+}
+
 function buyerCardHTML(b) {
-  const t=b.total;
-  const pPass=t>0?Math.round(b.passed/t*100):0;
-  const pFail=t>0?Math.round(b.failed/t*100):0;
-  const pQueue=t>0?Math.round(b.queued/t*100):0;
-  const pOther=t>0?Math.round((b.others+b.no_status)/t*100):0;
-  const clr=verCol(b.success_pct);
-  const docRows=(b.by_doc||[]).map(d=>{
-    const dc=verCol(d.success_pct);
-    const banEntries=Object.entries(d.bans||{});
-    const banTip=banEntries.length?banEntries.map(([k,v])=>k+': '+v).join(' | '):'нет данных';
-    const failedTag=d.failed>0?`<span class="stag stag-fail" style="cursor:default;position:relative;" title="${banTip}">замена: ${d.failed} ⓘ</span>`:'';
+  const t  = b.total;
+  const vc = b.verif_counts || {};
+
+  // Прогресс-бар по статусам верификации
+  const vPassed = (vc['Прошел']||0) + (vc['Прошел+кло']||0);
+  const vFailed = (vc['Не прошел вериф']||0) + (vc['Не прошел+кло']||0);
+  const vPodan  = vc['Подан'] || 0;
+  const vKlo    = vc['Кло'] || 0;
+  const vTotal  = Object.values(vc).reduce((a,b)=>a+b, 0);
+  const pPassed = t>0 ? Math.round(vPassed/t*100) : 0;
+  const pFailed = t>0 ? Math.round(vFailed/t*100) : 0;
+  const pPodan  = t>0 ? Math.round(vPodan/t*100)  : 0;
+  const pKlo    = t>0 ? Math.round(vKlo/t*100)    : 0;
+  const clr        = verCol(b.success_pct);
+  const pctWithKlo = verifPassKloPct(vc);
+  const vFin       = verifFinal(vc);
+
+  // Разбивка по doc-seller с тегами верификации
+  const docRows = (b.by_doc||[]).map(d=>{
+    const dvc = d.verif_counts || {};
+    const dTags = verifTagsHTML(dvc, true);
     return `<div class="buyer-doc-row">
       <span class="buyer-doc-name">${d.doc}</span>
-      <span style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-        ${d.passed>0?`<span class="stag stag-pass">прошли: ${d.passed}</span>`:''}
-        ${failedTag}
-        ${d.queued>0?`<span class="stag stag-queue">очередь: ${d.queued}</span>`:''}
-        ${d.vna>0?`<span style="font-weight:600;color:${dc};min-width:40px;text-align:right;">${d.success_pct}%</span>`:''}
+      <span style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+        <span style="font-size:11px;color:#aaa;">${d.total} акк.</span>
+        ${dTags || '<span style="font-size:10px;color:#444;">нет верификаций</span>'}
       </span>
     </div>`;
   }).join('');
-  const gmailRows=(b.by_gmail||[]).filter(g=>g.vna>0).slice(0,5).map(g=>{
-    const gc=verCol(g.success_pct);
-    return `<div class="buyer-doc-row">
-      <span class="buyer-doc-name" style="font-weight:500;">${g.gmail}</span>
-      <span style="display:flex;align-items:center;gap:8px;">
-        <span style="font-size:11px;color:#aaa;">${g.vna} акк.</span>
-        <span style="font-weight:600;color:${gc};">${g.success_pct}%</span>
-      </span>
-    </div>`;
+
+  // Секция статусов аккаунтов (account_status)
+  const statusEntries = Object.entries(b.status_counts||{}).sort((a,b)=>b[1]-a[1]);
+  const statusTags = statusEntries.map(([st,n])=>{
+    const c = accCol(st);
+    return `<span class="stag" style="background:${c}22;color:${c};border:1px solid ${c}55;">${st}: ${n}</span>`;
   }).join('');
+
   return `<div class="buyer-card">
     <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px;">
       <div class="buyer-name">${b.buyer}</div>
-      <span class="buyer-pct" style="color:${clr}">${b.success_pct}%</span>
+      <div style="text-align:right;">
+        <span class="buyer-pct" style="color:${clr}">${b.success_pct}%</span>
+        ${vFin>0 ? `<div style="font-size:12px;font-weight:600;color:${verCol(pctWithKlo)};margin-top:1px;">${pctWithKlo}% <span style="color:#888;font-weight:400;">с кло</span></div>` : ''}
+      </div>
     </div>
     <div style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin-bottom:2px;">
-      <div class="buyer-total">${t} аккаунтов выдано</div>
+      <div class="buyer-total">${t} выдано${vTotal>0?` <span style="color:#aaa;font-size:12px;font-weight:400;">· верифицировано: ${vTotal}</span>`:''}</div>
       ${(b.zamena_count||0)>0?`<div style="font-size:12px;color:#888780;">= <span style="color:#fff;font-weight:600;">${t-(b.zamena_count||0)}</span> платных + <span style="color:#d4944a;font-weight:600;">${b.zamena_count}</span> замен</div>`:''}
     </div>
     <div class="buyer-stack">
-      <div style="width:${pPass}%;background:#3a7d15;"></div>
-      <div style="width:${pFail}%;background:#c02020;"></div>
-      <div style="width:${pQueue}%;background:#185FA5;"></div>
-      <div style="width:${pOther}%;background:#534AB7;"></div>
+      <div style="width:${pPassed}%;background:#3a7d15;"></div>
+      <div style="width:${pFailed}%;background:#c02020;"></div>
+      <div style="width:${pPodan}%;background:#185FA5;"></div>
+      <div style="width:${pKlo}%;background:#7B5EA7;"></div>
     </div>
     <div class="buyer-tags">
-      ${b.passed>0?`<span class="stag stag-pass">прошли: ${b.passed}</span>`:''}
-      ${b.failed>0?`<span class="stag stag-fail">на замену/заменен: ${b.failed}</span>`:''}
-      ${b.queued>0?`<span class="stag stag-queue">в очереди: ${b.queued}</span>`:''}
-      ${b.others>0?`<span class="stag stag-other">прочие: ${b.others}</span>`:''}
+      ${verifTagsHTML(vc, false) || '<span style="font-size:11px;color:#444;">нет данных о верификации</span>'}
     </div>
     ${docRows?`<div class="divider"></div>${docRows}`:''}
-    ${gmailRows?`<div style="margin-top:10px;"><div style="font-size:11px;font-weight:600;color:#aaa;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;">Лучшие почты для заказа</div>${gmailRows}</div>`:''}
+    ${statusTags?`<div style="margin-top:12px;"><div style="font-size:11px;font-weight:600;color:#aaa;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;">Статус аккаунтов</div><div class="buyer-tags">${statusTags}</div></div>`:''}
   </div>`;
 }
 
 function renderBuyers(){
-  const data = activePeriod === 'mar' ? BUYERS_DATA_MAR : activePeriod === 'apr' ? BUYERS_DATA_APR : BUYERS_DATA;
+  const data = activePeriod === 'mar' ? BUYERS_DATA_MAR : activePeriod === 'apr' ? BUYERS_DATA_APR : activePeriod === 'may' ? BUYERS_DATA_MAY : activePeriod === 'jun' ? BUYERS_DATA_JUN : BUYERS_DATA;
   if(!data||data.length===0){
     document.getElementById('buyer-cards').innerHTML='<div class="empty-state">Нет данных — запустите скрипт обновления</div>';
     return;
@@ -756,29 +816,34 @@ function renderBuyers(){
   if(bfilter)  filteredData = filteredData.filter(b=>b.buyer===bfilter);
 
   const totAccounts=filteredData.reduce((s,b)=>s+b.total,0);
-  const totPassed=filteredData.reduce((s,b)=>s+b.passed,0);
-  const totFailed=filteredData.reduce((s,b)=>s+b.failed,0);
-  const totQueued=filteredData.reduce((s,b)=>s+b.queued,0);
-  const totVna=filteredData.reduce((s,b)=>s+b.vna,0);
-  const avgPct=totVna>0?Math.round(totPassed/totVna*100):0;
+  const aggVc       = verifAgg(filteredData);
+  const totProshl   = aggVc['Прошел'] || 0;
+  const totProshlKlo= aggVc['Прошел+кло'] || 0;
+  const totNeProshl = (aggVc['Не прошел вериф']||0) + (aggVc['Не прошел+кло']||0);
+  const totPodan    = aggVc['Подан'] || 0;
+  const totVerif    = Object.values(aggVc).reduce((a,b)=>a+b,0);
+  const totFinal    = verifFinal(aggVc);
+  const avgPct      = verifPassPct(aggVc);
+  const avgPctKlo   = verifPassKloPct(aggVc);
 
   document.getElementById('buyers-metrics').innerHTML=`
-    <div class="metric"><div class="metric-label">Аккаунтов выдано</div><div class="metric-value">${totAccounts.toLocaleString()}</div></div>
+    <div class="metric"><div class="metric-label">Аккаунтов выдано</div><div class="metric-value">${totAccounts.toLocaleString()}</div><div class="metric-hint">верифицировано: ${totVerif.toLocaleString()}</div></div>
     <div class="metric">
-      <div class="metric-label">Верификация</div>
+      <div class="metric-label">Верификация (Прошел)</div>
       <div class="metric-value" style="color:${verCol(avgPct)}">${avgPct}%</div>
+      <div style="font-size:13px;font-weight:600;color:${verCol(avgPctKlo)};margin-top:1px;">${avgPctKlo}% <span style="color:#888;font-weight:400;">с кло</span></div>
       <div class="metric-hint" style="margin-top:4px;">
-        из <b>${totVna.toLocaleString()}</b> дошедших до верификации
-        <div style="margin-top:4px;display:flex;justify-content:space-between;"><span>прошли</span><span style="font-weight:500;">${totPassed}</span></div>
-        <div style="display:flex;justify-content:space-between;"><span>на замену</span><span style="font-weight:500;">${totFailed}</span></div>
-        <div style="display:flex;justify-content:space-between;"><span>в очереди</span><span style="font-weight:500;">${totQueued}</span></div>
-        <div style="display:flex;justify-content:space-between;color:#bbb;"><span>ещё не верифицированы</span><span style="font-weight:500;">${totAccounts-totVna-totQueued}</span></div>
+        из <b>${totFinal.toLocaleString()}</b> с финальным статусом
+        <div style="margin-top:4px;display:flex;justify-content:space-between;"><span>прошли</span><span style="font-weight:500;">${totProshl}</span></div>
+        <div style="display:flex;justify-content:space-between;"><span>прошли+кло</span><span style="font-weight:500;">${totProshlKlo}</span></div>
+        <div style="display:flex;justify-content:space-between;"><span>не прошли</span><span style="font-weight:500;">${totNeProshl}</span></div>
+        <div style="display:flex;justify-content:space-between;color:#bbb;"><span>подан (в ожидании)</span><span style="font-weight:500;">${totPodan}</span></div>
       </div>
     </div>
     <div class="metric">
-      <div class="metric-label">На замену</div>
-      <div class="metric-value" style="color:#c02020">${totFailed}</div>
-      <div class="metric-hint" style="margin-top:4px;">${totVna>0?Math.round(totFailed/totVna*100):0}% от дошедших до верификации</div>
+      <div class="metric-label">Не прошли</div>
+      <div class="metric-value" style="color:#c02020">${totNeProshl}</div>
+      <div class="metric-hint" style="margin-top:4px;">${totFinal>0?Math.round(totNeProshl/totFinal*100):0}% от финальных статусов</div>
     </div>`;
   const groupBy = document.getElementById('buyers-groupby') ? document.getElementById('buyers-groupby').value : 'flat';
 
@@ -794,18 +859,19 @@ function renderBuyers(){
     document.getElementById('buyer-cards').innerHTML = teamNames.map(team => {
       const buyers = teamMap[team];
       const tTotal = buyers.reduce((s,b)=>s+b.total,0);
-      const tPassed = buyers.reduce((s,b)=>s+b.passed,0);
-      const tFailed = buyers.reduce((s,b)=>s+b.failed,0);
-      const tVna = buyers.reduce((s,b)=>s+b.vna,0);
-      const tPct = tVna>0?Math.round(tPassed/tVna*100):0;
+      const tVc = verifAgg(buyers);
+      const tProshl = tVc['Прошел'] || 0;
+      const tNeProshl = (tVc['Не прошел вериф']||0) + (tVc['Не прошел+кло']||0);
+      const tPct = verifPassPct(tVc);
+      const tPctKlo = verifPassKloPct(tVc);
       const clr = verCol(tPct);
       return `<div style="grid-column:1/-1;">
         <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;padding:10px 16px;background:#f7f7f5;border-radius:10px;border:1px solid rgba(0,0,0,0.07);">
           <div style="font-size:16px;font-weight:700;color:#1c1c1a;">${team}</div>
           <div style="font-size:13px;color:#888780;">${tTotal.toLocaleString()} акк.</div>
-          <div style="font-size:14px;font-weight:600;color:${clr};">${tPct}%</div>
-          ${tPassed>0?`<span class="stag stag-pass">прошли: ${tPassed}</span>`:''}
-          ${tFailed>0?`<span class="stag stag-fail">замена: ${tFailed}</span>`:''}
+          <div style="font-size:14px;font-weight:600;color:${clr};">${tPct}% <span style="font-size:12px;color:#888;">/ ${tPctKlo}% с кло</span></div>
+          ${tProshl>0?`<span class="stag stag-pass">прошли: ${tProshl}</span>`:''}
+          ${tNeProshl>0?`<span class="stag stag-fail">не прошли: ${tNeProshl}</span>`:''}
         </div>
         <div class="buyer-cards" style="margin-bottom:24px;">${buyers.map(b=>buyerCardHTML(b)).join('')}</div>
       </div>`;
@@ -817,7 +883,7 @@ function renderBuyers(){
 
 // DOC SELLERS
 function renderDocSellers(){
-  const data = activePeriod==='mar' ? DOC_SELLERS_DATA_MAR : activePeriod==='apr' ? DOC_SELLERS_DATA_APR : DOC_SELLERS_DATA;
+  const data = activePeriod==='mar' ? DOC_SELLERS_DATA_MAR : activePeriod==='apr' ? DOC_SELLERS_DATA_APR : activePeriod==='may' ? DOC_SELLERS_DATA_MAY : activePeriod==='jun' ? DOC_SELLERS_DATA_JUN : DOC_SELLERS_DATA;
   if(!data||data.length===0){
     document.getElementById('docseller-cards').innerHTML='<div class="empty-state">Нет данных — запустите скрипт обновления</div>';
     return;
@@ -859,21 +925,50 @@ function renderDocSellers(){
 
   document.getElementById('docseller-cards').innerHTML = filteredData.map(s=>{
     const t = s.total;
-    const pPass  = t>0 ? Math.round(s.passed/t*100) : 0;
-    const pFail  = t>0 ? Math.round(s.failed/t*100) : 0;
-    const pQueue = t>0 ? Math.round(s.queued/t*100) : 0;
+    const vc = s.verif_counts || {};
+    const VERIF_COLORS = {
+      'Прошел':        '#3a7d15',
+      'Прошел+кло':    '#2d9e6e',
+      'Не прошел вериф': '#c02020',
+      'Не прошел+кло': '#8B2020',
+      'Подан':         '#185FA5',
+      'Кло':           '#7B5EA7',
+      'Да':            '#888',
+    };
+    const VERIF_ORDER = ['Прошел','Прошел+кло','Не прошел вериф','Не прошел+кло','Подан','Кло','Да'];
+
+    // Прогресс-бар по статусам верификации
+    const vPassed = (vc['Прошел']||0) + (vc['Прошел+кло']||0);
+    const vFailed = (vc['Не прошел вериф']||0) + (vc['Не прошел+кло']||0);
+    const vPodan  = vc['Подан'] || 0;
+    const vKlo    = vc['Кло'] || 0;
+    const vTotal  = Object.values(vc).reduce((a,b)=>a+b, 0);
+    const pPassed = t>0 ? Math.round(vPassed/t*100) : 0;
+    const pFailed = t>0 ? Math.round(vFailed/t*100) : 0;
+    const pPodan  = t>0 ? Math.round(vPodan/t*100)  : 0;
+    const pKlo    = t>0 ? Math.round(vKlo/t*100)    : 0;
     const clr = verCol(s.success_pct);
 
+    // Финальные статусы (без "Подан" — ещё в ожидании)
+    const vFinal = (vc['Прошел']||0) + (vc['Прошел+кло']||0) + (vc['Не прошел вериф']||0) + (vc['Не прошел+кло']||0) + (vc['Кло']||0) + (vc['Да']||0);
+    const pctWithKlo = vFinal>0 ? Math.round(((vc['Прошел']||0)+(vc['Прошел+кло']||0))/vFinal*1000)/10 : 0;
+
+    const verifTags = VERIF_ORDER
+      .filter(k => vc[k] > 0)
+      .map(k => `<span class="stag" style="background:${VERIF_COLORS[k]}22;color:${VERIF_COLORS[k]};border:1px solid ${VERIF_COLORS[k]}55;">${k}: <b>${vc[k]}</b></span>`)
+      .join('');
+
     const buyerRows = (s.by_buyer||[]).map(b=>{
-      const bc = verCol(b.success_pct);
+      const bvc = b.verif_counts || {};
+      const bVerifTags = VERIF_ORDER
+        .filter(k => bvc[k] > 0)
+        .map(k => `<span class="stag" style="background:${VERIF_COLORS[k]}22;color:${VERIF_COLORS[k]};border:1px solid ${VERIF_COLORS[k]}55;font-size:10px;padding:1px 5px;">${k}: ${bvc[k]}</span>`)
+        .join('');
       return `<div class="buyer-doc-row">
         <span class="buyer-doc-name">${b.buyer}</span>
-        <span style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+        <span style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
           <span style="font-size:11px;color:#aaa;">${b.total} акк.</span>
-          ${b.passed>0 ? `<span class="stag stag-pass">прошли: ${b.passed}</span>` : ''}
-          ${b.failed>0 ? `<span class="stag stag-fail">замена: ${b.failed}</span>` : ''}
-          ${b.queued>0 ? `<span class="stag stag-queue">очередь: ${b.queued}</span>` : ''}
-          ${b.vna>0 ? `<span style="font-weight:600;color:${bc};min-width:40px;text-align:right;">${b.success_pct}%</span>` : ''}
+          ${bVerifTags || '<span style="font-size:10px;color:#444;">нет верификаций</span>'}
         </span>
       </div>`;
     }).join('');
@@ -881,18 +976,20 @@ function renderDocSellers(){
     return `<div class="buyer-card">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px;">
         <div class="buyer-name">${s.seller}</div>
-        <span class="buyer-pct" style="color:${clr}">${s.success_pct}%</span>
+        <div style="text-align:right;">
+          <span class="buyer-pct" style="color:${clr}">${s.success_pct}%</span>
+          ${vFinal>0 ? `<div style="font-size:12px;font-weight:600;color:${verCol(pctWithKlo)};margin-top:1px;">${pctWithKlo}% <span style="color:#888;font-weight:400;">с кло</span></div>` : ''}
+        </div>
       </div>
-      <div class="buyer-total">${t} аккаунтов выдано</div>
+      <div class="buyer-total">${t} аккаунтов выдано${vTotal>0 ? ` <span style="color:#aaa;font-size:12px;font-weight:400;">· верифицировано: ${vTotal}</span>` : ''}</div>
       <div class="buyer-stack">
-        <div style="width:${pPass}%;background:#3a7d15;"></div>
-        <div style="width:${pFail}%;background:#c02020;"></div>
-        <div style="width:${pQueue}%;background:#185FA5;"></div>
+        <div style="width:${pPassed}%;background:#3a7d15;"></div>
+        <div style="width:${pFailed}%;background:#c02020;"></div>
+        <div style="width:${pPodan}%;background:#185FA5;"></div>
+        <div style="width:${pKlo}%;background:#7B5EA7;"></div>
       </div>
       <div class="buyer-tags">
-        ${s.passed>0 ? `<span class="stag stag-pass">прошли: ${s.passed}</span>` : ''}
-        ${s.failed>0 ? `<span class="stag stag-fail">на замену: ${s.failed}</span>` : ''}
-        ${s.queued>0 ? `<span class="stag stag-queue">в очереди: ${s.queued}</span>` : ''}
+        ${verifTags || '<span style="font-size:11px;color:#444;">нет данных о верификации</span>'}
       </div>
       ${buyerRows ? `<div class="divider"></div>${buyerRows}` : ''}
     </div>`;
