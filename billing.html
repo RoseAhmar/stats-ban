@@ -296,7 +296,7 @@
   <a class="back-link" href="index.html">← Главное меню</a>
   <div>
     <div class="page-title">Расчёт с баерами</div>
-    <div class="page-subtitle">Обновлено: 01.08.2026 11:13</div>
+    <div class="page-subtitle">Обновлено: 01.08.2026 11:31</div>
   </div>
 </div>
 
@@ -347,6 +347,7 @@
   </div>
   <div id="view-daily" style="display:none">
     <div class="dates-list" id="dates-list"></div>
+    <div class="dates-list" id="team-filter" style="margin-top:6px"></div>
     <div id="day-detail"></div>
   </div>
   <div id="view-mbteam" style="display:none">
@@ -534,6 +535,7 @@ function render() {
 
 let activeView = 'buyers';
 let activeDate = null;
+let activeTeam = '';  // фильтр по MB Team на вкладке «По дням» ('' = все)
 
 function setView(v) {
   activeView = v;
@@ -887,11 +889,24 @@ function renderDaily() {
     `<div class="date-pill ${d === activeDate ? 'active' : ''}" onclick="selectDate('${d}')">${fmtDate(d)}</div>`
   ).join('');
 
+  // Кнопки фильтра по MB Team (собираем команды из данных)
+  const teams = Array.from(new Set(data.map(b => b.mb_team).filter(t => t && t !== '—'))).sort();
+  if (activeTeam && !teams.includes(activeTeam)) activeTeam = '';
+  const teamPills = [{v:'', label:'Все команды'}].concat(teams.map(t => ({v:t, label:t})));
+  document.getElementById('team-filter').innerHTML = teamPills.map(t =>
+    `<div class="date-pill ${t.v === activeTeam ? 'active' : ''}" onclick="selectTeam('${t.v}')">${t.label}</div>`
+  ).join('');
+
   renderDayDetail(data, activeDate);
 }
 
 function selectDate(date) {
   activeDate = date;
+  renderDaily();
+}
+
+function selectTeam(team) {
+  activeTeam = team;
   renderDaily();
 }
 
@@ -912,15 +927,18 @@ function renderDayDetail(data, date) {
     rows.push({ buyer: b.buyer, mb_team: b.mb_team || '', total, zamenas, paid, agencies });
   });
 
-  if (rows.length === 0) {
-    document.getElementById('day-detail').innerHTML = `<div style="color:var(--muted);padding:20px 0;">Нет данных за эту дату</div>`;
+  // Фильтр по выбранной команде
+  const shownRows = activeTeam ? rows.filter(r => r.mb_team === activeTeam) : rows;
+
+  if (shownRows.length === 0) {
+    document.getElementById('day-detail').innerHTML = `<div style="color:var(--muted);padding:20px 0;">Нет данных${activeTeam ? ' по команде ' + activeTeam : ''} за эту дату</div>`;
     return;
   }
 
-  rows.sort((a, b) => b.total - a.total);
-  const totalCount = rows.reduce((s, r) => s + r.total, 0);
-  const totalZamenas = rows.reduce((s, r) => s + r.zamenas, 0);
-  const totalPaid = rows.reduce((s, r) => s + r.paid, 0);
+  shownRows.sort((a, b) => b.total - a.total);
+  const totalCount = shownRows.reduce((s, r) => s + r.total, 0);
+  const totalZamenas = shownRows.reduce((s, r) => s + r.zamenas, 0);
+  const totalPaid = shownRows.reduce((s, r) => s + r.paid, 0);
 
   document.getElementById('day-detail').innerHTML = `
     <table class="day-table">
@@ -933,7 +951,7 @@ function renderDayDetail(data, date) {
         </tr>
       </thead>
       <tbody>
-        ${rows.map(r => {
+        ${shownRows.map(r => {
           const countCell = r.zamenas > 0
             ? `${r.paid} акк. + <span style="color:var(--text)">${r.zamenas} замен</span> <span style="color:var(--muted)">(${r.total})</span>`
             : `${r.total}`;
@@ -956,7 +974,7 @@ function renderDayDetail(data, date) {
           </tr>`;
         }).join('')}
         <tr class="day-total-row">
-          <td>Итого за ${fmtDate(date)}</td>
+          <td>Итого за ${fmtDate(date)}${activeTeam ? ' · ' + activeTeam : ''}</td>
           <td style="text-align:right">${totalZamenas > 0 ? `${totalPaid} + <span style="color:var(--text)">${totalZamenas} замен</span> (${totalCount})` : totalCount}</td>
           <td></td>
           <td style="text-align:right" class="day-amount">${fmtMoney(totalPaid * PRICE_PER_ACCOUNT)}</td>
